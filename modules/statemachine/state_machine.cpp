@@ -363,29 +363,20 @@ void StateMachine::_bind_methods() {
 */
 }
 
-
+StateMachineNode *StateMachine::add_node()
+{
+	StateMachineNode *n = NULL;
+	n = memnew( StateMachineNode );
+	node_map[node_map.size()]=n;
+	return n;
+}
 
 
 
 
 StateMachine::StateMachine() {
 
-    /*cell_size=2;
-	octant_size=4;
-	awaiting_update=false;
-	_in_tree=false;
-	center_x=true;
-	center_y=true;
-	center_z=true;
 
-	clip=false;
-	clip_floor=0;
-	clip_axis=Vector3::AXIS_Z;
-	clip_above=true;
-	baked_lock=false;
-	bake=false;
-	cell_scale=1.0;
-*/
 
 
 
@@ -394,6 +385,6 @@ StateMachine::StateMachine() {
 
 StateMachine::~StateMachine() {
 
-    //clear();
+
 
 }

@@ -34,11 +34,31 @@
 #include "scene/3d/spatial.h"
 #include "scene/resources/multimesh.h"
 
-//heh heh, godotsphir!! this shares no code and the design is completely different with previous projects i've done..
-//should scale better with hardware that supports instancing
+struct Anchor {
 
+	Vector<int16_t> links;
+};
+
+struct StateMachineNode {
+
+	Vector<int16_t> id;
+	int16_t type;
+	Point2 pos;
+
+	bool CanTransition();
+	void OnEnter();
+	void Tick(float dt);
+	void OnExit();
+
+
+	Vector<Anchor> anchors;
+
+	StateMachineNode() {};
+	virtual ~StateMachineNode() { }
+};
 
 class StateMachine : public Node {
+public:
 
 
 	OBJ_TYPE( StateMachine, Node);
@@ -48,9 +68,10 @@ class StateMachine : public Node {
 
 	// void _queue_dirty_map();
 	// void _update_dirty_map_callback();
-
+public:
+	StateMachineNode *add_node();
 	void resource_changed(const RES& p_res);
-
+	
 
 protected:
 
@@ -70,57 +91,22 @@ public:
 
 	enum NodeType {
 
-		NODE_OUTPUT,
-		NODE_ANIMATION,
-		NODE_ONESHOT,
-		NODE_MIX,
-		NODE_BLEND2,
-		NODE_BLEND3,
-		NODE_BLEND4,
-		NODE_TIMESCALE,
-		NODE_TIMESEEK,
-		NODE_TRANSITION,
+		NODE_DEFAULT,
 
 		NODE_MAX,
 	};
 
-	enum ConnectError {
 
-		CONNECT_OK,
-		CONNECT_INCOMPLETE,
-		CONNECT_CYCLE
-	};
 
 private:
-
+	Map<uint16_t,StateMachineNode*> node_map;
 	enum {
 
 		DISCONNECTED = -1,
 	};
-	struct Input {
-
-		StringName node;
-		//Input() { node=-1;  }
-	};
-
-	struct NodeBase {
-
-		bool cycletest;
-
-		NodeType type;
-		Point2 pos;
 
 
-		Vector<Input> inputs;
 
-		NodeBase() { cycletest = false; };
-		virtual ~NodeBase() { cycletest = false; }
-	};
-
-	struct NodeOut : public NodeBase {
-
-		NodeOut() { type = NODE_OUTPUT; inputs.resize(1); }
-	};
 };
 
 #endif // CUBE_STATE_MACHINE_H

@@ -1139,8 +1139,9 @@ StringName StateMachineEditor::_add_node(int p_item) {
 			break;
 	}
 
-
-	state_machine->add_node((StateMachine::NodeType)p_item, name);
+	*/
+	StateMachineNode *node = state_machine->add_node();
+	/*(StateMachine::NodeType)p_item, name);
 	state_machine->node_set_pos(name, Point2(last_x, last_y));
 	order.push_back(name);
 	last_x += 10;
@@ -1349,7 +1350,7 @@ StateMachineEditor::StateMachineEditor() {
 	add_child(add_menu);
 
 	p = add_menu->get_popup();
-	p->add_item("Animation Node", StateMachine::NODE_ANIMATION);
+	/*p->add_item("Animation Node", StateMachine::NODE_ANIMATION);
 	p->add_item("OneShot Node", StateMachine::NODE_ONESHOT);
 	p->add_item("Mix Node", StateMachine::NODE_MIX);
 	p->add_item("Blend2 Node", StateMachine::NODE_BLEND2);
@@ -1357,7 +1358,7 @@ StateMachineEditor::StateMachineEditor() {
 	p->add_item("Blend4 Node", StateMachine::NODE_BLEND4);
 	p->add_item("TimeScale Node", StateMachine::NODE_TIMESCALE);
 	p->add_item("TimeSeek Node", StateMachine::NODE_TIMESEEK);
-	p->add_item("Transition Node", StateMachine::NODE_TRANSITION);
+	p->add_item("Transition Node", StateMachine::NODE_TRANSITION);*/
 	p->add_separator();
 	p->add_item("Import Animations...", MENU_IMPORT_ANIMATIONS); // wtf
 	p->add_separator();

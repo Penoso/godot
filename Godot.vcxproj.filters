@@ -6983,6 +6983,9 @@
     <ClInclude Include="modules\statemachine\state_machine_editor_plugin.h">
       <Filter>modules\statemachine</Filter>
     </ClInclude>
+    <ClInclude Include="modules\statemachine\state_machine_schema.h">
+      <Filter>modules\statemachine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="core\make_binders.py">

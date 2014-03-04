@@ -1,5 +1,5 @@
 /*************************************************************************/
-/*  state_machine.h                                                           */
+/*  state_machine_schema.h                                                           */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
@@ -32,91 +32,81 @@
 
 class StateMachineSchema {
 public:
-	struct NodeType
+
+	struct InputAnchorSchema
 	{
 		String name;
+		Vector<String> allowedTypes;		
+	};
 
+	struct OutputAnchorSchema
+	{
+		String name;
+		String outputType;
+	};
+
+	struct NodeSchema
+	{
+		String name;
+		Vector<InputAnchorSchema*> inAnchors;
+		Vector<OutputAnchorSchema*> outAnchors;
+
+		/* script this?		
+		String script;*/
+		
 	};
 
 	StateMachineSchema()
 	{
+		InputAnchorSchema *input = new InputAnchorSchema();
+		input->name = "Input";
+		input->allowedTypes.push_back("State");
+		input->allowedTypes.push_back("Transition");
 
-	}
-}
-/*
-struct Anchor {
-
-	Vector<int16_t> links;
-};
-
-struct StateMachineNode {
-
-	Vector<int16_t> id;
-	int16_t type;
-	Point2 pos;
-
-	bool CanTransition();
-	void OnEnter();
-	void Tick(float dt);
-	void OnExit();
+		OutputAnchorSchema *trans_out = new OutputAnchorSchema();
+		trans_out->name = "Output";
+		trans_out->outputType = "Transition";
+		
+		OutputAnchorSchema *state_out = new OutputAnchorSchema();
+		state_out->name = "Output";
+		state_out->outputType = "State";
 
 
-	Vector<Anchor> anchors;
+		// Hard code this for now...
+		NodeSchema *state = new NodeSchema();
+		state->name="State";
+		state->inAnchors.push_back(input);
+		state->outAnchors.push_back(state_out);
+		
 
-	StateMachineNode() {};
-	virtual ~StateMachineNode() { }
-};
-
-class StateMachine : public Node {
-public:
-
-
-	OBJ_TYPE( StateMachine, Node);
-	OBJ_CATEGORY("State Machines");
-
-	bool awaiting_update;
-
-	// void _queue_dirty_map();
-	// void _update_dirty_map_callback();
-public:
-	StateMachineNode *add_node();
-	void resource_changed(const RES& p_res);
-	
-
-protected:
-
-	bool _set(const StringName& p_name, const Variant& p_value);
-	bool _get(const StringName& p_name,Variant &r_ret) const;
-	void _get_property_list( List<PropertyInfo> *p_list) const;
-
-	void _notification(int p_what);
-	static void _bind_methods();
-
-public:
-
-	
-	StateMachine();
-	~StateMachine();
+		NodeSchema *transition = new NodeSchema();
+		transition->name="Transition";
+		transition->inAnchors.push_back(input);
+		transition->outAnchors.push_back(trans_out);
 
 
-	enum NodeType {
+		NodeSchema *root = new NodeSchema();
+		root->name="Root";
+		state->name="State";
+		state->inAnchors.push_back(input);
+		state->outAnchors.push_back(state_out);
 
-		NODE_DEFAULT,
-
-		NODE_MAX,
+		node_map.insert(root->name,root);
+		node_map.insert(state->name,state);
+		node_map.insert(transition->name,transition);
+		
 	};
 
-
+	NodeSchema *GetNode(String name)
+	{
+		return node_map[name];
+	};
 
 private:
-	Map<uint16_t,StateMachineNode*> node_map;
-	enum {
-
-		DISCONNECTED = -1,
-	};
-
+	Map<StringName,NodeSchema*> node_map;
 
 
 };
-*/
-#endif // CUBE_STATE_MACHINE_H
+
+#endif // STATE_MACHINE_SCHEMA_H
+

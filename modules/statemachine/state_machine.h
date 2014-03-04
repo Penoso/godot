@@ -33,6 +33,7 @@
 #include "scene/resources/mesh_library.h"
 #include "scene/3d/spatial.h"
 #include "scene/resources/multimesh.h"
+#include "state_machine_schema.h"
 
 struct Anchor {
 

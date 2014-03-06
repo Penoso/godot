@@ -88,7 +88,7 @@ Size2 StateMachineEditor::_get_maximum_size() {
 
 const char* StateMachineEditor::_node_type_names[] = { "Output", "Animation", "OneShot", "Mix", "Blend2", "Blend3", "Blend4", "TimeScale", "TimeSeek", "Transition" };
 
-Size2 StateMachineEditor::get_node_size(const StringName& p_node) const {
+Size2 StateMachineEditor::get_node_size(const StateMachineNode & p_node) const {
 
 	
 	//StateMachine::NodeType type = state_machine->node_get_type(p_node);
@@ -477,7 +477,7 @@ void StateMachineEditor::_popup_edit_dialog() {
 	updating_edit = false;
 }
 
-void StateMachineEditor::_draw_node(const StringName& p_node) {
+void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 
 	RID ci = get_canvas_item();
 	//StateMachine::NodeType type = state_machine->node_get_type(p_node);
@@ -491,8 +491,9 @@ void StateMachineEditor::_draw_node(const StringName& p_node) {
 
 
 	Size2 size = get_node_size(p_node);
+	
+	Point2 pos = p_node.pos;
 	/*
-	Point2 pos = state_machine->node_get_pos(p_node);
 	if (click_type == CLICK_NODE && click_node == p_node) {
 
 		pos += click_motion - click_pos;
@@ -501,7 +502,7 @@ void StateMachineEditor::_draw_node(const StringName& p_node) {
 		if (pos.y<5)
 			pos.y = 5;
 
-	}
+	}*/
 
 	pos -= Point2(h_scroll->get_val(), v_scroll->get_val());
 
@@ -516,18 +517,18 @@ void StateMachineEditor::_draw_node(const StringName& p_node) {
 	Color bx = font_color_title;
 	bx.a *= 0.1;
 	draw_rect(Rect2(ofs, Size2(size.width - style->get_minimum_size().width, font->get_height())), bx);
-	font->draw_halign(ci, ofs + ascofs, HALIGN_CENTER, w, String(_node_type_names[type]), font_color_title);
+	font->draw_halign(ci, ofs + ascofs, HALIGN_CENTER, w, String("Node")/*String(_node_type_names[type])*/, font_color_title);
 
 	ofs.y += h;
-	font->draw_halign(ci, ofs + ascofs, HALIGN_CENTER, w, p_node, font_color);
+	font->draw_halign(ci, ofs + ascofs, HALIGN_CENTER, w, String("Node")/*p_node*/, font_color);
 	ofs.y += h;
 
 	int count = 2; // title and name
-	int inputs = state_machine->node_get_input_count(p_node);
+	int inputs = 0;// state_machine->node_get_input_count(p_node);
 	count += inputs ? inputs : 1;
 
 	float icon_h_ofs = Math::floor((font->get_height() - slot_icon->get_height()) / 2.0) + 1;
-
+	/*
 	if (type != StateMachine::NODE_OUTPUT)
 		slot_icon->draw(ci, ofs + Point2(w, icon_h_ofs)); //output
 
@@ -631,7 +632,7 @@ void StateMachineEditor::_node_param_changed() {
 }
 #endif
 
-StateMachineEditor::ClickType StateMachineEditor::_locate_click(const Point2& p_click, StringName *p_node_id, int *p_slot_index) const {
+StateMachineEditor::ClickType StateMachineEditor::_locate_click(const Point2& p_click, StateMachineNode *p_node_id, int *p_slot_index) const {
 
 
 	Ref<StyleBox> style = get_stylebox("panel", "PopupMenu");
@@ -755,15 +756,15 @@ void StateMachineEditor::_input_event(InputEvent p_event) {
 										   if (p_event.mouse_button.button_index == 1) {
 											   click_pos = Point2(p_event.mouse_button.x, p_event.mouse_button.y);
 											   click_motion = click_pos;
-											   click_type = _locate_click(click_pos, &click_node, &click_slot);
+											   click_type = _locate_click(click_pos, click_node, &click_slot);
 											   if (click_type != CLICK_NONE) {
 
-												   order.erase(click_node);
-												   order.push_back(click_node);
+												   //order.erase(click_node);
+												   //order.push_back(click_node);
 												   update();
 											   }
 
-											   switch (click_type) {
+											   /*switch (click_type) {
 											   case CLICK_INPUT_SLOT: {
 																		  click_pos = _get_slot_pos(click_node, true, click_slot);
 											   } break;
@@ -779,7 +780,7 @@ void StateMachineEditor::_input_event(InputEvent p_event) {
 																		 //		_node_edit_property(click_node);
 											   } break;
 											   default:{}
-											   }
+											   }*/
 										   }
 										   if (p_event.mouse_button.button_index == 2) {
 
@@ -852,13 +853,13 @@ void StateMachineEditor::_input_event(InputEvent p_event) {
 																		   }*/
 
 											   } break;
-											   case CLICK_NODE: {/*
-																	Point2 new_pos = state_machine->node_get_pos(click_node) + (click_motion - click_pos);
+											   case CLICK_NODE: {
+																	Point2 new_pos = click_node->pos + (click_motion - click_pos);
 																	if (new_pos.x<5)
 																		new_pos.x = 5;
 																	if (new_pos.y<5)
 																		new_pos.y = 5;
-																	state_machine->node_set_pos(click_node, new_pos);*/
+																	click_node->pos = new_pos;
 
 											   } break;
 											   default: {}
@@ -935,10 +936,12 @@ void StateMachineEditor::_notification(int p_what) {
 								//VisualServer::get_singleton()->canvas_item_add_rect(get_canvas_item(),Rect2(Point2(),get_size()),Color(0,0,0,1));
 								get_stylebox("bg", "Tree")->draw(get_canvas_item(), Rect2(Point2(), get_size()));
 								VisualServer::get_singleton()->canvas_item_set_clip(get_canvas_item(), true);
+								
+								List<uint16_t> nodes;
+								state_machine->get_node_list(&nodes);
+								for (List<uint16_t>::Element *E = nodes.front(); E; E = E->next()) {
 
-								for (List<StringName>::Element *E = order.front(); E; E = E->next()) {
-
-									_draw_node(E->get());
+									_draw_node(*state_machine->get_node(E->get()));
 								}
 
 								if (click_type == CLICK_INPUT_SLOT || click_type == CLICK_OUTPUT_SLOT) {
@@ -1141,6 +1144,7 @@ StringName StateMachineEditor::_add_node(int p_item) {
 
 	*/
 	StateMachineNode *node = state_machine->add_node();
+	node->pos = Point2(last_x, last_y);
 	/*(StateMachine::NodeType)p_item, name);
 	state_machine->node_set_pos(name, Point2(last_x, last_y));
 	order.push_back(name);
@@ -1350,7 +1354,9 @@ StateMachineEditor::StateMachineEditor() {
 	add_child(add_menu);
 
 	p = add_menu->get_popup();
-	/*p->add_item("Animation Node", StateMachine::NODE_ANIMATION);
+	p->add_item("Animation Node", 0);
+
+	/*
 	p->add_item("OneShot Node", StateMachine::NODE_ONESHOT);
 	p->add_item("Mix Node", StateMachine::NODE_MIX);
 	p->add_item("Blend2 Node", StateMachine::NODE_BLEND2);

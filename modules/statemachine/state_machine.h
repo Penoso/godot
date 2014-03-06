@@ -54,6 +54,7 @@ struct StateMachineNode {
 
 	Vector<Anchor> anchors;
 
+
 	StateMachineNode() {};
 	virtual ~StateMachineNode() { }
 };
@@ -72,7 +73,9 @@ public:
 public:
 	StateMachineNode *add_node();
 	void resource_changed(const RES& p_res);
-	
+	void get_node_list(List<uint16_t> *p_node_list) const;
+	StateMachineNode *get_node(uint16_t node);
+
 
 protected:
 

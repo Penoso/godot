@@ -371,7 +371,19 @@ StateMachineNode *StateMachine::add_node()
 	return n;
 }
 
+void StateMachine::get_node_list(List<uint16_t> *p_node_list) const
+{
+	for (Map<uint16_t, StateMachineNode*>::Element *E = node_map.front(); E; E = E->next()) {
 
+		p_node_list->push_back(E->key());
+	}
+}
+
+
+StateMachineNode *StateMachine::get_node(uint16_t node)
+{
+	return node_map[node];
+}
 
 
 StateMachine::StateMachine() {

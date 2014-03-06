@@ -102,7 +102,7 @@ class StateMachineEditor : public Control {
 	Point2 offset;
 	ClickType click_type;
 	Point2 click_pos;
-	StringName click_node;
+	StateMachineNode *click_node;
 	int click_slot;
 	Point2 click_motion;
 	ClickType rclick_type;
@@ -112,8 +112,8 @@ class StateMachineEditor : public Control {
 	//Button *play_button;
 
 	Size2 _get_maximum_size();
-	Size2 get_node_size(const StringName &p_node) const;
-	void _draw_node(const StringName& p_node);
+	Size2 get_node_size(const StateMachineNode &p_node) const;
+	void _draw_node(const StateMachineNode &p_node);
 
 	AcceptDialog *filter_dialog;
 	Tree *filter;
@@ -149,7 +149,7 @@ class StateMachineEditor : public Control {
 	void _edit_dialog_changedf(float);
 	void _edit_dialog_changed();
 	void _dialog_changed() const;
-	ClickType _locate_click(const Point2& p_click, StringName *p_node_id, int *p_slot_index) const;
+	ClickType _locate_click(const Point2& p_click, StateMachineNode *p_node_id, int *p_slot_index) const;
 	Point2 _get_slot_pos(const StringName& p_node_id, bool p_input, int p_slot);
 
 	StringName _add_node(int p_item);

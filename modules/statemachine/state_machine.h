@@ -43,8 +43,9 @@ struct Anchor {
 struct StateMachineNode {
 
 	Vector<int16_t> id;
-	int16_t type;
+	StateMachineSchema::SM_NODETYPE type;
 	Point2 pos;
+	String name;
 
 	bool CanTransition();
 	void OnEnter();
@@ -71,10 +72,11 @@ public:
 	// void _queue_dirty_map();
 	// void _update_dirty_map_callback();
 public:
-	StateMachineNode *add_node();
+	StateMachineNode *add_node(StateMachineSchema::SM_NODETYPE type);
 	void resource_changed(const RES& p_res);
 	void get_node_list(List<uint16_t> *p_node_list) const;
 	StateMachineNode *get_node(uint16_t node);
+	StateMachineSchema::NodeSchema *get_node_schema(uint16_t node);
 
 
 protected:
@@ -93,15 +95,6 @@ public:
 	~StateMachine();
 
 
-	enum NodeType {
-
-		NODE_DEFAULT,
-
-		NODE_MAX,
-	};
-
-
-
 private:
 	Map<uint16_t,StateMachineNode*> node_map;
 	enum {
@@ -109,7 +102,7 @@ private:
 		DISCONNECTED = -1,
 	};
 
-
+	StateMachineSchema *schema;
 
 };
 

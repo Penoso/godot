@@ -97,7 +97,8 @@ Size2 StateMachineEditor::get_node_size(const StateMachineNode & p_node) const {
 	Ref<Font> font = get_font("font", "PopupMenu");
 	Color font_color = get_color("font_color", "PopupMenu");
 
-	Size2 size = style->get_minimum_size();
+	Size2 size = state_machine->get_node_schema(p_node.type)->size;//style->get_minimum_size();
+	;
 	/*
 	int count = 2; // title and name
 	int inputs = state_machine->node_get_input_count(p_node);
@@ -481,11 +482,11 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 
 	RID ci = get_canvas_item();
 	//StateMachine::NodeType type = state_machine->node_get_type(p_node);
-
+	StateMachineSchema::NodeSchema *nodeschema = state_machine->get_node_schema(p_node.type);
 	Ref<StyleBox> style = get_stylebox("panel", "PopupMenu");
 	Ref<Font> font = get_font("font", "PopupMenu");
 	Color font_color = get_color("font_color", "PopupMenu");
-	Color font_color_title = get_color("font_color_hover", "PopupMenu");
+	Color font_color_title = nodeschema->color;//get_color("font_color_hover", "PopupMenu");
 	font_color_title.a *= 0.8;
 	Ref<Texture> slot_icon = get_icon("NodeRealSlot", "EditorIcons");
 
@@ -493,8 +494,8 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 	Size2 size = get_node_size(p_node);
 	
 	Point2 pos = p_node.pos;
-	/*
-	if (click_type == CLICK_NODE && click_node == p_node) {
+	
+	if (click_type == CLICK_NODE && click_node == &p_node) {
 
 		pos += click_motion - click_pos;
 		if (pos.x<5)
@@ -502,7 +503,7 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 		if (pos.y<5)
 			pos.y = 5;
 
-	}*/
+	}
 
 	pos -= Point2(h_scroll->get_val(), v_scroll->get_val());
 
@@ -517,62 +518,30 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 	Color bx = font_color_title;
 	bx.a *= 0.1;
 	draw_rect(Rect2(ofs, Size2(size.width - style->get_minimum_size().width, font->get_height())), bx);
-	font->draw_halign(ci, ofs + ascofs, HALIGN_CENTER, w, String("Node")/*String(_node_type_names[type])*/, font_color_title);
+	font->draw_halign(ci, ofs + ascofs, HALIGN_CENTER, w, p_node.name, font_color_title);
 
 	ofs.y += h;
-	font->draw_halign(ci, ofs + ascofs, HALIGN_CENTER, w, String("Node")/*p_node*/, font_color);
+	font->draw_halign(ci, ofs + ascofs, HALIGN_CENTER, w, nodeschema->name, font_color);
 	ofs.y += h;
-
+	Point2 originalofs = ofs;
 	int count = 2; // title and name
-	int inputs = 0;// state_machine->node_get_input_count(p_node);
+	
+	int inputs =nodeschema->inAnchors.size();
 	count += inputs ? inputs : 1;
 
 	float icon_h_ofs = Math::floor((font->get_height() - slot_icon->get_height()) / 2.0) + 1;
-	/*
-	if (type != StateMachine::NODE_OUTPUT)
-		slot_icon->draw(ci, ofs + Point2(w, icon_h_ofs)); //output
+	
+	//if (type != StateMachine::NODE_OUTPUT)
+	//	slot_icon->draw(ci, ofs + Point2(w, icon_h_ofs)); //output
 
 	if (inputs) {
 		for (int i = 0; i<inputs; i++) {
 
+			
 			slot_icon->draw(ci, ofs + Point2(-slot_icon->get_width(), icon_h_ofs));
 			String text;
-			switch (type) {
-
-			case StateMachine::NODE_TIMESCALE:
-			case StateMachine::NODE_TIMESEEK: text = "in"; break;
-			case StateMachine::NODE_OUTPUT: text = "out"; break;
-			case StateMachine::NODE_ANIMATION: break;
-			case StateMachine::NODE_ONESHOT: text = (i == 0 ? "in" : "add"); break;
-			case StateMachine::NODE_BLEND2:
-			case StateMachine::NODE_MIX: text = (i == 0 ? "a" : "b"); break;
-			case StateMachine::NODE_BLEND3:
-				switch (i) {
-				case 0: text = "b-"; break;
-				case 1: text = "a"; break;
-				case 2: text = "b+"; break;
-
-				}
-				break;
-
-
-			case StateMachine::NODE_BLEND4:
-				switch (i) {
-				case 0: text = "a0"; break;
-				case 1: text = "b0"; break;
-				case 2: text = "a1"; break;
-				case 3: text = "b1"; break;
-				}
-				break;
-
-			case StateMachine::NODE_TRANSITION:
-				text = itos(i);
-				if (state_machine->transition_node_has_input_auto_advance(p_node, i))
-					text += "->";
-
-				break;
-			default: {}
-			}
+			text = "b-";
+	
 			font->draw(ci, ofs + ascofs + Point2(3, 0), text, font_color);
 
 			ofs.y += h;
@@ -582,6 +551,35 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 		ofs.y += h;
 	}
 
+	ofs = originalofs;
+	int outputs =nodeschema->outAnchors.size();
+	count += outputs ? outputs : 1;
+	ofs.x+=w;
+	//float icon_h_ofs = Math::floor((font->get_height() - slot_icon->get_height()) / 2.0) + 1;
+	/*
+	if (type != StateMachine::NODE_OUTPUT)
+		slot_icon->draw(ci, ofs + Point2(w, icon_h_ofs)); //output
+*/
+
+	ascofs.x = -ascofs.x;
+	if (outputs) {
+		for (int i = 0; i<outputs; i++) {
+
+			
+			slot_icon->draw(ci, ofs + Point2(slot_icon->get_width(), icon_h_ofs));
+			String text;
+			text = "b-";
+	
+			font->draw(ci, ofs + ascofs + Point2(-3, 0), text, font_color);
+
+			ofs.y += h;
+		}
+	}
+	else {
+		ofs.y += h;
+	}
+
+	/*
 	Ref<StyleBox> pg_bg = get_stylebox("bg", "ProgressBar");
 	Ref<StyleBox> pg_fill = get_stylebox("fill", "ProgressBar");
 	Rect2 pg_rect(ofs, Size2(w, h));
@@ -632,7 +630,7 @@ void StateMachineEditor::_node_param_changed() {
 }
 #endif
 
-StateMachineEditor::ClickType StateMachineEditor::_locate_click(const Point2& p_click, StateMachineNode *p_node_id, int *p_slot_index) const {
+StateMachineEditor::ClickType StateMachineEditor::_locate_click(const Point2& p_click, StateMachineNode **p_node_id, int *p_slot_index) const {
 
 
 	Ref<StyleBox> style = get_stylebox("panel", "PopupMenu");
@@ -640,15 +638,21 @@ StateMachineEditor::ClickType StateMachineEditor::_locate_click(const Point2& p_
 	Color font_color = get_color("font_color", "PopupMenu");
 
 	float h = (font->get_height() + get_constant("vseparation", "PopupMenu"));
+
+	List<uint16_t> nodes;
+	state_machine->get_node_list(&nodes);
+	for (List<uint16_t>::Element *E = nodes.front(); E; E = E->next()) {
+		StateMachineNode *node;
+		node = state_machine->get_node(E->get());
 	/*
 	for (const List<StringName>::Element *E = order.back(); E; E = E->prev()) {
 
 		StringName node = E->get();
 		
 		StateMachine::NodeType type = state_machine->node_get_type(node);
-
-		Point2 pos = state_machine->node_get_pos(node);
-		Size2 size = get_node_size(node);
+		*/
+		Point2 pos = node->pos;
+		Size2 size = get_node_size(*node);
 
 		pos -= Point2(h_scroll->get_val(), v_scroll->get_val());
 
@@ -672,7 +676,7 @@ StateMachineEditor::ClickType StateMachineEditor::_locate_click(const Point2& p_
 		y -= h;
 
 		int count = 0; // title and name
-		int inputs = state_machine->node_get_input_count(node);
+		/* int inputs = state_machine->node_get_input_count(node);
 		count += inputs ? inputs : 1;
 
 		for (int i = 0; i<count; i++) {
@@ -693,10 +697,10 @@ StateMachineEditor::ClickType StateMachineEditor::_locate_click(const Point2& p_
 				}
 			}
 			y -= h;
-		}
+		}*/
 
-		return (type != StateMachine::NODE_OUTPUT && type != StateMachine::NODE_TIMESEEK) ? CLICK_PARAMETER : CLICK_NODE;
-	}*/
+		//return (type != StateMachine::NODE_OUTPUT && type != StateMachine::NODE_TIMESEEK) ? CLICK_PARAMETER : CLICK_NODE;
+	}
 
 	return CLICK_NONE;
 }
@@ -756,7 +760,7 @@ void StateMachineEditor::_input_event(InputEvent p_event) {
 										   if (p_event.mouse_button.button_index == 1) {
 											   click_pos = Point2(p_event.mouse_button.x, p_event.mouse_button.y);
 											   click_motion = click_pos;
-											   click_type = _locate_click(click_pos, click_node, &click_slot);
+											   click_type = _locate_click(click_pos, &click_node, &click_slot);
 											   if (click_type != CLICK_NONE) {
 
 												   //order.erase(click_node);
@@ -885,7 +889,7 @@ void StateMachineEditor::_input_event(InputEvent p_event) {
 										   update();
 									   }
 
-	} break;
+		} break;
 	}
 
 }
@@ -1143,16 +1147,17 @@ StringName StateMachineEditor::_add_node(int p_item) {
 	}
 
 	*/
-	StateMachineNode *node = state_machine->add_node();
+	StateMachineNode *node = state_machine->add_node(0);
 	node->pos = Point2(last_x, last_y);
 	/*(StateMachine::NodeType)p_item, name);
 	state_machine->node_set_pos(name, Point2(last_x, last_y));
-	order.push_back(name);
+	order.push_back(name);*/
+	
 	last_x += 10;
 	last_y += 10;
 	last_x = last_x % (int)get_size().width;
 	last_y = last_y % (int)get_size().height;
-	update();
+	/*update();
 
 	return name;*/
 

@@ -33,6 +33,8 @@
 class StateMachineSchema {
 public:
 
+	typedef uint16_t SM_NODETYPE ;
+
 	struct InputAnchorSchema
 	{
 		String name;
@@ -47,9 +49,20 @@ public:
 
 	struct NodeSchema
 	{
+		NodeSchema()
+		{
+			size.x = 100;
+			size.y = 70;
+			color = Color(0.7f,0.8f,0.67f);
+
+		}
+		SM_NODETYPE type;
 		String name;
 		Vector<InputAnchorSchema*> inAnchors;
 		Vector<OutputAnchorSchema*> outAnchors;
+
+		Point2 size;
+		Color color;
 
 		/* script this?		
 		String script;*/
@@ -77,7 +90,8 @@ public:
 		state->name="State";
 		state->inAnchors.push_back(input);
 		state->outAnchors.push_back(state_out);
-		
+
+
 
 		NodeSchema *transition = new NodeSchema();
 		transition->name="Transition";
@@ -87,23 +101,22 @@ public:
 
 		NodeSchema *root = new NodeSchema();
 		root->name="Root";
-		state->name="State";
-		state->inAnchors.push_back(input);
-		state->outAnchors.push_back(state_out);
+		//root->inAnchors.push_back(input);
+		root->outAnchors.push_back(state_out);
 
-		node_map.insert(root->name,root);
-		node_map.insert(state->name,state);
-		node_map.insert(transition->name,transition);
+		node_map.insert(1,root);
+		node_map.insert(0,state);
+		node_map.insert(2,transition);
 		
 	};
 
-	NodeSchema *GetNode(String name)
+	NodeSchema *GetNode(SM_NODETYPE id)
 	{
-		return node_map[name];
+		return node_map[id];
 	};
 
 private:
-	Map<StringName,NodeSchema*> node_map;
+	Map<SM_NODETYPE,NodeSchema*> node_map;
 
 
 };

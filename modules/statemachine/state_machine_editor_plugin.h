@@ -149,7 +149,7 @@ class StateMachineEditor : public Control {
 	void _edit_dialog_changedf(float);
 	void _edit_dialog_changed();
 	void _dialog_changed() const;
-	ClickType _locate_click(const Point2& p_click, StateMachineNode *p_node_id, int *p_slot_index) const;
+	ClickType _locate_click(const Point2& p_click, StateMachineNode **p_node_id, int *p_slot_index) const;
 	Point2 _get_slot_pos(const StringName& p_node_id, bool p_input, int p_slot);
 
 	StringName _add_node(int p_item);

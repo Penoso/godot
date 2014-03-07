@@ -363,10 +363,12 @@ void StateMachine::_bind_methods() {
 */
 }
 
-StateMachineNode *StateMachine::add_node()
+StateMachineNode *StateMachine::add_node(StateMachineSchema::SM_NODETYPE type)
 {
 	StateMachineNode *n = NULL;
 	n = memnew( StateMachineNode );
+	n->type = type;
+	n->name = schema->GetNode(type)->name;
 	node_map[node_map.size()]=n;
 	return n;
 }
@@ -385,18 +387,21 @@ StateMachineNode *StateMachine::get_node(uint16_t node)
 	return node_map[node];
 }
 
+StateMachineSchema::NodeSchema *StateMachine::get_node_schema(uint16_t node)
+{
+	return schema->GetNode(node);
+
+}
 
 StateMachine::StateMachine() {
 
-
-
-
-
+	schema=memnew(StateMachineSchema);
 }
+
 
 
 StateMachine::~StateMachine() {
 
-
+	memdelete(schema);
 
 }

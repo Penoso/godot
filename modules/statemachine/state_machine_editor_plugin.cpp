@@ -554,7 +554,7 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 	ofs = originalofs;
 	int outputs =nodeschema->outAnchors.size();
 	count += outputs ? outputs : 1;
-	ofs.x+=w;
+	//ofs.x+=w;
 	//float icon_h_ofs = Math::floor((font->get_height() - slot_icon->get_height()) / 2.0) + 1;
 	/*
 	if (type != StateMachine::NODE_OUTPUT)
@@ -565,12 +565,12 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 	if (outputs) {
 		for (int i = 0; i<outputs; i++) {
 
+			slot_icon->draw(ci, ofs + Point2(w, icon_h_ofs));
 			
-			slot_icon->draw(ci, ofs + Point2(slot_icon->get_width(), icon_h_ofs));
 			String text;
-			text = "b-";
+			text = "P";
 	
-			font->draw(ci, ofs + ascofs + Point2(-3, 0), text, font_color);
+		font->draw(ci, ofs + ascofs + Point2(w - (font->get_string_size(text).width + 3) , icon_h_ofs), text, font_color);
 
 			ofs.y += h;
 		}
@@ -676,28 +676,37 @@ StateMachineEditor::ClickType StateMachineEditor::_locate_click(const Point2& p_
 		y -= h;
 
 		int count = 0; // title and name
-		/* int inputs = state_machine->node_get_input_count(node);
-		count += inputs ? inputs : 1;
+		
+		int inputs = state_machine->get_node_schema(node->type)->inAnchors.size();
+		int outputs = state_machine->get_node_schema(node->type)->outAnchors.size();
+			
+		//count += inputs ? inputs : 1;
+		count = inputs>outputs?inputs:outputs;
 
 		for (int i = 0; i<count; i++) {
 
 			if (y<h) {
 
-				if (inputs == 0 || (type != StateMachine::NODE_OUTPUT && pos.x > size.width / 2))	{
+				if (/*type != StateMachine::NODE_OUTPUT &&*/ pos.x > size.width / 2)	{
 
-					if (p_slot_index)
-						*p_slot_index = 0;
-					return CLICK_OUTPUT_SLOT;
+					if(i<=outputs)
+					{					
+						if (p_slot_index)
+							*p_slot_index = i;
+						return CLICK_OUTPUT_SLOT;
+					}
 				}
 				else {
-
-					if (p_slot_index)
-						*p_slot_index = i;
-					return CLICK_INPUT_SLOT;
+					if(i<=inputs)
+					{
+						if (p_slot_index)
+							*p_slot_index = i;
+						return CLICK_INPUT_SLOT;
+					}
 				}
 			}
 			y -= h;
-		}*/
+		}
 
 		//return (type != StateMachine::NODE_OUTPUT && type != StateMachine::NODE_TIMESEEK) ? CLICK_PARAMETER : CLICK_NODE;
 	}
@@ -794,14 +803,14 @@ void StateMachineEditor::_input_event(InputEvent p_event) {
 											   }
 											   else {
 												   // try to disconnect/remove
-												   /*
+												   
 												   Point2 rclick_pos = Point2(p_event.mouse_button.x, p_event.mouse_button.y);
 												   rclick_type = _locate_click(rclick_pos, &rclick_node, &rclick_slot);
 												   if (rclick_type == CLICK_INPUT_SLOT || rclick_type == CLICK_OUTPUT_SLOT) {
 
 													   node_popup->clear();
 													   node_popup->add_item("Disconnect", NODE_DISCONNECT);
-													   if (state_machine->node_get_type(rclick_node) == StateMachine::NODE_TRANSITION) {
+													   /*if (state_machine->node_get_type(rclick_node) == StateMachine::NODE_TRANSITION) {
 														   node_popup->add_item("Add Input", NODE_ADD_INPUT);
 														   if (rclick_type == CLICK_INPUT_SLOT) {
 															   if (state_machine->transition_node_has_input_auto_advance(rclick_node, rclick_slot))
@@ -811,13 +820,13 @@ void StateMachineEditor::_input_event(InputEvent p_event) {
 															   node_popup->add_item("Delete Input", NODE_DELETE_INPUT);
 
 														   }
-													   }
+													   }*/
 
 													   node_popup->set_pos(rclick_pos + get_global_pos());
 													   node_popup->popup();
 
 												   }
-												   
+												   /*
 												   if (rclick_type == CLICK_NODE) {
 													   node_popup->clear();
 													   node_popup->add_item("Rename", NODE_RENAME);
@@ -839,22 +848,22 @@ void StateMachineEditor::_input_event(InputEvent p_event) {
 											   switch (click_type) {
 											   case CLICK_INPUT_SLOT:
 											   case CLICK_OUTPUT_SLOT: {
-																		   /*
+																		  
 
 																		   Point2 dst_click_pos = Point2(p_event.mouse_button.x, p_event.mouse_button.y);
-																		   StringName id;
+																		   StateMachineNode *id;
 																		   int slot;
 																		   ClickType dst_click_type = _locate_click(dst_click_pos, &id, &slot);
 
 																		   if (dst_click_type == CLICK_INPUT_SLOT && click_type == CLICK_OUTPUT_SLOT) {
 
-																			   state_machine->connect(click_node, id, slot);
+																			   //state_machine->connect(click_node, id, slot);
 
 																		   }
 																		   if (click_type == CLICK_INPUT_SLOT && dst_click_type == CLICK_OUTPUT_SLOT) {
 
-																			   state_machine->connect(id, click_node, click_slot);
-																		   }*/
+																			   //state_machine->connect(id, click_node, click_slot);
+																		   }
 
 											   } break;
 											   case CLICK_NODE: {

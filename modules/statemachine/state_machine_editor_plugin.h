@@ -106,7 +106,7 @@ class StateMachineEditor : public Control {
 	int click_slot;
 	Point2 click_motion;
 	ClickType rclick_type;
-	StringName rclick_node;
+	StateMachineNode *rclick_node;
 	int rclick_slot;
 
 	//Button *play_button;

@@ -366,9 +366,11 @@ void StateMachine::_bind_methods() {
 StateMachineNode *StateMachine::add_node(StateMachineSchema::SM_NODETYPE type)
 {
 	StateMachineNode *n = NULL;
-	n = memnew( StateMachineNode );
+	n = memnew( StateMachineNode() );
 	n->type = type;
 	n->name = schema->GetNode(type)->name;
+	n->inputAnchors.resize(schema->GetNode(type)->inAnchors.size());
+	n->outputAnchors.resize(schema->GetNode(type)->outAnchors.size());
 	node_map[node_map.size()]=n;
 	return n;
 }

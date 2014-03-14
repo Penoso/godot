@@ -97,7 +97,8 @@ Size2 StateMachineEditor::get_node_size(const StateMachineNode & p_node) const {
 	Ref<Font> font = get_font("font", "PopupMenu");
 	Color font_color = get_color("font_color", "PopupMenu");
 
-	Size2 size = state_machine->get_node_schema(p_node.type)->size;//style->get_minimum_size();
+
+	Size2 size = p_node.get_size();// state_machine->get_node_schema(p_node.type)->size;//style->get_minimum_size();
 	;
 	/*
 	int count = 2; // title and name
@@ -493,7 +494,7 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 
 	Size2 size = get_node_size(p_node);
 	
-	Point2 pos = p_node.pos;
+	Point2 pos = p_node.get_position();
 	
 	if (click_type == CLICK_NODE && click_node == &p_node) {
 
@@ -526,23 +527,19 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 	Point2 originalofs = ofs;
 	int count = 2; // title and name
 	
-	int inputs =nodeschema->inAnchors.size();
+	int inputs = p_node.get_input_anchors()->size(); 
 	count += inputs ? inputs : 1;
 
 	float icon_h_ofs = Math::floor((font->get_height() - slot_icon->get_height()) / 2.0) + 1;
 	
-	//if (type != StateMachine::NODE_OUTPUT)
-	//	slot_icon->draw(ci, ofs + Point2(w, icon_h_ofs)); //output
 
 	if (inputs) {
 		for (int i = 0; i<inputs; i++) {
 
 			
-			slot_icon->draw(ci, ofs + Point2(-slot_icon->get_width(), icon_h_ofs));
-			String text;
-			text = "b-";
+			slot_icon->draw(ci, pos + p_node.get_input_anchor_position(i) + Point2(-slot_icon->get_width(), icon_h_ofs));
 	
-			font->draw(ci, ofs + ascofs + Point2(3, 0), text, font_color);
+			font->draw(ci, pos + p_node.get_input_anchor_position(i) + ascofs + Point2(3, 0), p_node.get_input_anchor_name(i), font_color);
 
 			ofs.y += h;
 		}
@@ -551,26 +548,21 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 		ofs.y += h;
 	}
 
-	ofs = originalofs;
-	int outputs =nodeschema->outAnchors.size();
+	//ofs = originalofs;
+
+	int outputs = p_node.get_output_anchors()->size();
 	count += outputs ? outputs : 1;
-	//ofs.x+=w;
-	//float icon_h_ofs = Math::floor((font->get_height() - slot_icon->get_height()) / 2.0) + 1;
-	/*
-	if (type != StateMachine::NODE_OUTPUT)
-		slot_icon->draw(ci, ofs + Point2(w, icon_h_ofs)); //output
-*/
+
 
 	ascofs.x = -ascofs.x;
 	if (outputs) {
 		for (int i = 0; i<outputs; i++) {
 
-			slot_icon->draw(ci, ofs + Point2(w, icon_h_ofs));
-			
-			String text;
-			text = "P";
+			slot_icon->draw(ci, pos + p_node.get_output_anchor_position(i) + Point2(-slot_icon->get_width(), icon_h_ofs));
 	
-		font->draw(ci, ofs + ascofs + Point2(w - (font->get_string_size(text).width + 3) , icon_h_ofs), text, font_color);
+			font->draw(ci, pos + p_node.get_output_anchor_position(i) + 
+						   ascofs + Point2(-(font->get_string_size(p_node.get_output_anchor_name(i)).width + 3) , 0), 
+						   p_node.get_output_anchor_name(i), font_color);
 
 			ofs.y += h;
 		}
@@ -680,33 +672,34 @@ StateMachineEditor::ClickType StateMachineEditor::_locate_click(const Point2& p_
 		int inputs = state_machine->get_node_schema(node->type)->inAnchors.size();
 		int outputs = state_machine->get_node_schema(node->type)->outAnchors.size();
 			
-		//count += inputs ? inputs : 1;
-		count = inputs>outputs?inputs:outputs;
+		Point2 clicksize = Point2(4,4);
+		for (int i = 0; i<inputs; i++) {
+			Rect2 rect;
+			rect.set_pos( node->get_input_anchor_position(i) - clicksize);
+			rect.set_size(clicksize * 2);
 
-		for (int i = 0; i<count; i++) {
-
-			if (y<h) {
-
-				if (/*type != StateMachine::NODE_OUTPUT &&*/ pos.x > size.width / 2)	{
-
-					if(i<=outputs)
-					{					
-						if (p_slot_index)
-							*p_slot_index = i;
-						return CLICK_OUTPUT_SLOT;
-					}
-				}
-				else {
-					if(i<=inputs)
-					{
-						if (p_slot_index)
-							*p_slot_index = i;
-						return CLICK_INPUT_SLOT;
-					}
-				}
+			if (rect.has_point(pos))
+			{
+				if (p_slot_index)
+					*p_slot_index = i;
+				return CLICK_INPUT_SLOT;
 			}
-			y -= h;
 		}
+
+		for (int i = 0; i<outputs; i++) {
+			Rect2 rect;
+			rect.set_pos( node->get_output_anchor_position(i) - clicksize);
+			rect.set_size(clicksize * 2);
+
+			if (rect.has_point(pos))
+			{
+				if (p_slot_index)
+					*p_slot_index = i;
+				return CLICK_OUTPUT_SLOT;
+			}
+		}
+
+
 
 		//return (type != StateMachine::NODE_OUTPUT && type != StateMachine::NODE_TIMESEEK) ? CLICK_PARAMETER : CLICK_NODE;
 	}
@@ -721,7 +714,7 @@ Point2 StateMachineEditor::_get_slot_pos(const StringName& p_node, bool p_input,
 	Ref<Texture> slot_icon = get_icon("NodeRealSlot", "EditorIcons");
 	Point2 pos = Point2(0, 0);
 /*	Size2 size = get_node_size(p_node);
-	Point2 pos = state_machine->node_get_pos(p_node);
+	Point2 pos = state_machine->node_glt_pos(p_node);
 
 	if (click_type == CLICK_NODE && click_node == p_node) {
 

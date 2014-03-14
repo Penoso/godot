@@ -36,24 +36,36 @@
 #include "state_machine_schema.h"
 
 struct Anchor {
-
 	Vector<int16_t> links;
 };
 
 struct StateMachineNode {
 
-	Vector<int16_t> id;
+	int16_t id;
 	StateMachineSchema::SM_NODETYPE type;
 	Point2 pos;
 	String name;
+
 
 	bool CanTransition();
 	void OnEnter();
 	void Tick(float dt);
 	void OnExit();
 
+	String get_name() const  {return name;}
+	Point2 get_position() const {return pos;}
+	Point2 get_size() const  {return Point2(150,100);}
 
-	Vector<Anchor> anchors;
+	String get_input_anchor_name(int index) const {return String("Name");}
+	Point2 get_input_anchor_position(int index) const { return Point2(0.0f,50.0f + (index * 10.0f));}
+	const Vector<Anchor> *get_input_anchors() const {return &inputAnchors;}
+
+	String get_output_anchor_name(int index) const {return String("Name");}
+	Point2 get_output_anchor_position(int index) const { return Point2(150.0f,50.0f + (index * 10.0f));}
+	const Vector<Anchor> *get_output_anchors() const {return &outputAnchors;}
+
+	Vector<Anchor> inputAnchors;
+	Vector<Anchor> outputAnchors;
 
 
 	StateMachineNode() {};
@@ -78,6 +90,7 @@ public:
 	StateMachineNode *get_node(uint16_t node);
 	StateMachineSchema::NodeSchema *get_node_schema(uint16_t node);
 
+	
 
 protected:
 

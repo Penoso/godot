@@ -35,8 +35,13 @@
 #include "scene/resources/multimesh.h"
 #include "state_machine_schema.h"
 
-struct Anchor {
-	Vector<int16_t> links;
+struct StateMachine_Link {
+	int16_t node;
+	int16_t anchor;
+};
+
+struct StateMachine_Anchor {
+	Vector<StateMachine_Link> links;
 };
 
 struct StateMachineNode {
@@ -58,14 +63,14 @@ struct StateMachineNode {
 
 	String get_input_anchor_name(int index) const {return String("Name");}
 	Point2 get_input_anchor_position(int index) const { return Point2(0.0f,50.0f + (index * 10.0f));}
-	const Vector<Anchor> *get_input_anchors() const {return &inputAnchors;}
+	const Vector<StateMachine_Anchor *> *get_input_anchors() const {return &inputAnchors;}
 
 	String get_output_anchor_name(int index) const {return String("Name");}
 	Point2 get_output_anchor_position(int index) const { return Point2(150.0f,50.0f + (index * 10.0f));}
-	const Vector<Anchor> *get_output_anchors() const {return &outputAnchors;}
+	const Vector<StateMachine_Anchor *> *get_output_anchors() const {return &outputAnchors;}
 
-	Vector<Anchor> inputAnchors;
-	Vector<Anchor> outputAnchors;
+	Vector<StateMachine_Anchor *> inputAnchors;
+	Vector<StateMachine_Anchor *> outputAnchors;
 
 
 	StateMachineNode() {};
@@ -89,7 +94,7 @@ public:
 	void get_node_list(List<uint16_t> *p_node_list) const;
 	StateMachineNode *get_node(uint16_t node);
 	StateMachineSchema::NodeSchema *get_node_schema(uint16_t node);
-
+	bool connect(StateMachineNode *source,int source_anchor, StateMachineNode *dest,int dest_anchor );
 	
 
 protected:
@@ -116,6 +121,7 @@ private:
 	};
 
 	StateMachineSchema *schema;
+	int node_guid;
 
 };
 

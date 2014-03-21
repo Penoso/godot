@@ -142,7 +142,7 @@ bool StateMachine::_get(const StringName& p_name,Variant &r_ret) const {
 
 	String name=p_name;
 
-    /*
+	/*
 	if (name=="theme/theme") {
 		r_ret= get_theme();
 	} else if (name=="cell/size") {
@@ -236,7 +236,7 @@ void StateMachine::_get_property_list( List<PropertyInfo> *p_list) const {
 		p_list->push_back( PropertyInfo( Variant::REAL, base+"disable_distance", PROPERTY_HINT_NONE,"",PROPERTY_USAGE_STORAGE) );
 		p_list->push_back( PropertyInfo( Variant::COLOR, base+"disable_color", PROPERTY_HINT_NONE,"",PROPERTY_USAGE_STORAGE) );
 		p_list->push_back( PropertyInfo( Variant::BOOL, base+"exterior_portal", PROPERTY_HINT_NONE,"",PROPERTY_USAGE_STORAGE) );
-    }*/
+	}*/
 }
 
 void StateMachine::_notification(int p_what) {
@@ -257,7 +257,7 @@ void StateMachine::_notification(int p_what) {
 
 			awaiting_update=false;
 
-            last_transform=get_global_transform();
+			last_transform=get_global_transform();
 		} break;
 		case NOTIFICATION_TRANSFORM_CHANGED: {
 
@@ -269,7 +269,7 @@ void StateMachine::_notification(int p_what) {
 				_octant_transform(E->key());
 			}
 
-            last_transform=new_xform;
+			last_transform=new_xform;
 
 		} break;
 		case NOTIFICATION_EXIT_WORLD: {
@@ -286,7 +286,21 @@ void StateMachine::_notification(int p_what) {
 */	}
 }
 
+bool StateMachine::connect(StateMachineNode *source,int source_anchor, StateMachineNode *dest,int dest_anchor )
+{
+	StateMachine_Link sourcelink;
+	sourcelink.node = dest->id;
+	sourcelink.anchor = dest_anchor;
 
+	source->get_output_anchors()->get(source_anchor)->links.push_back(sourcelink);
+
+	StateMachine_Link destlink;
+	destlink.node = source->id;
+	destlink.anchor = source_anchor;
+	dest->get_input_anchors()->get(dest_anchor)->links.push_back(destlink);
+	
+	return true;
+}
 
 
 void StateMachine::resource_changed(const RES& p_res) {
@@ -367,10 +381,21 @@ StateMachineNode *StateMachine::add_node(StateMachineSchema::SM_NODETYPE type)
 {
 	StateMachineNode *n = NULL;
 	n = memnew( StateMachineNode() );
+	n->id = node_guid++;
 	n->type = type;
 	n->name = schema->GetNode(type)->name;
+
+	// This should be moved to the constructor
 	n->inputAnchors.resize(schema->GetNode(type)->inAnchors.size());
+	for(int i=0;i<schema->GetNode(type)->inAnchors.size();i++)
+	{
+		n->inputAnchors.set(i,memnew(StateMachine_Anchor));		
+	}
 	n->outputAnchors.resize(schema->GetNode(type)->outAnchors.size());
+	for(int i=0;i<schema->GetNode(type)->outAnchors.size();i++)
+	{
+		n->outputAnchors.set(i,memnew(StateMachine_Anchor));		
+	}
 	node_map[node_map.size()]=n;
 	return n;
 }
@@ -398,6 +423,7 @@ StateMachineSchema::NodeSchema *StateMachine::get_node_schema(uint16_t node)
 StateMachine::StateMachine() {
 
 	schema=memnew(StateMachineSchema);
+	node_guid = 0;
 }
 
 
@@ -405,5 +431,11 @@ StateMachine::StateMachine() {
 StateMachine::~StateMachine() {
 
 	memdelete(schema);
+	// Delete all the nodes here
+	/*for (Map<uint16_t, StateMachineNode*>::Element *E = node_map.front(); E; E = E->next()) {
 
+	for(int i=0;i<n->inputAnchors.size();i++)
+	{
+		n->inputAnchors.set(i,memnew(StateMachine_Anchor));		
+	}*/
 }

@@ -542,6 +542,18 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 			font->draw(ci, pos + p_node.get_input_anchor_position(i) + ascofs + Point2(3, 0), p_node.get_input_anchor_name(i), font_color);
 
 			ofs.y += h;
+
+			/*int links = p_node.get_input_anchors()->get(i)->links.size();
+			for(int j=0; j<links; j++)
+			{
+				StateMachine_Link link = p_node.get_input_anchors()->get(j)->links.get(j);
+
+
+				Point2 dest = state_machine->get_node(link.node)->get_output_anchor_position(link.anchor);// _get_slot_pos(c.dst_node,true,c.dst_input);
+				Color col = Color(1,1,0.5,0.8);
+
+				_draw_cos_line(p_node.get_input_anchor_position(i),dest,col);
+			}*/
 		}
 	}
 	else {
@@ -565,52 +577,25 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 						   p_node.get_output_anchor_name(i), font_color);
 
 			ofs.y += h;
+
+			int links = p_node.get_output_anchors()->get(i)->links.size();
+			for(int j=0; j<links; j++)
+			{
+				StateMachine_Link link = p_node.get_output_anchors()->get(j)->links.get(j);
+				
+				
+				Point2 dest = state_machine->get_node(link.node)->get_input_anchor_position(link.anchor);// _get_slot_pos(c.dst_node,true,c.dst_input);
+				Color col = Color(1,1,0.5,0.8);
+
+				_draw_cos_line(p_node.get_output_anchor_position(i),dest,col);
+			}
 		}
 	}
 	else {
 		ofs.y += h;
 	}
 
-	/*
-	Ref<StyleBox> pg_bg = get_stylebox("bg", "ProgressBar");
-	Ref<StyleBox> pg_fill = get_stylebox("fill", "ProgressBar");
-	Rect2 pg_rect(ofs, Size2(w, h));
-
-	bool editable = true;
-	switch (type) {
-	case StateMachine::NODE_ANIMATION: {
-
-												  Ref<Animation> anim = state_machine->animation_node_get_animation(p_node);
-												  String text;
-												  if (state_machine->animation_node_get_master_animation(p_node) != "")
-													  text = state_machine->animation_node_get_master_animation(p_node);
-												  else if (anim.is_null())
-													  text = "load..";
-												  else
-													  text = anim->get_name();
-
-												  font->draw_halign(ci, ofs + ascofs, HALIGN_CENTER, w, text, font_color_title);
-
-	} break;
-	case StateMachine::NODE_ONESHOT:
-	case StateMachine::NODE_MIX:
-	case StateMachine::NODE_BLEND2:
-	case StateMachine::NODE_BLEND3:
-	case StateMachine::NODE_BLEND4:
-	case StateMachine::NODE_TIMESCALE:
-	case StateMachine::NODE_TRANSITION: {
-
-												   font->draw_halign(ci, ofs + ascofs, HALIGN_CENTER, w, "edit..", font_color_title);
-	} break;
-	default: editable = false;
-	}
-
-	if (editable) {
-
-		Ref<Texture> arrow = get_icon("arrow", "Tree");
-		Point2 arrow_ofs(w - arrow->get_width(), Math::floor((h - arrow->get_height()) / 2));
-		arrow->draw(ci, ofs + arrow_ofs);
-	}*/
+//_draw_cos_line
 }
 
 #if 0
@@ -630,7 +615,7 @@ StateMachineEditor::ClickType StateMachineEditor::_locate_click(const Point2& p_
 	Color font_color = get_color("font_color", "PopupMenu");
 
 	float h = (font->get_height() + get_constant("vseparation", "PopupMenu"));
-
+	*p_node_id = 0;
 	List<uint16_t> nodes;
 	state_machine->get_node_list(&nodes);
 	for (List<uint16_t>::Element *E = nodes.front(); E; E = E->next()) {
@@ -672,7 +657,7 @@ StateMachineEditor::ClickType StateMachineEditor::_locate_click(const Point2& p_
 		int inputs = state_machine->get_node_schema(node->type)->inAnchors.size();
 		int outputs = state_machine->get_node_schema(node->type)->outAnchors.size();
 			
-		Point2 clicksize = Point2(4,4);
+		Point2 clicksize = Point2(8,8);
 		for (int i = 0; i<inputs; i++) {
 			Rect2 rect;
 			rect.set_pos( node->get_input_anchor_position(i) - clicksize);
@@ -850,12 +835,12 @@ void StateMachineEditor::_input_event(InputEvent p_event) {
 
 																		   if (dst_click_type == CLICK_INPUT_SLOT && click_type == CLICK_OUTPUT_SLOT) {
 
-																			   //state_machine->connect(click_node, id, slot);
+																			   state_machine->connect(click_node, click_slot, id, slot);
 
 																		   }
 																		   if (click_type == CLICK_INPUT_SLOT && dst_click_type == CLICK_OUTPUT_SLOT) {
 
-																			   //state_machine->connect(id, click_node, click_slot);
+																			    state_machine->connect(id, slot,  click_node, click_slot);
 																		   }
 
 											   } break;

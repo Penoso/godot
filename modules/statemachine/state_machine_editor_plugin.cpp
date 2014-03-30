@@ -581,13 +581,13 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 			int links = p_node.get_output_anchors()->get(i)->links.size();
 			for(int j=0; j<links; j++)
 			{
-				StateMachine_Link link = p_node.get_output_anchors()->get(j)->links.get(j);
+				StateMachine_Link link =  p_node.get_output_anchors()->get(j)->links.get(j);
 				
 				
-				Point2 dest = state_machine->get_node(link.node)->get_input_anchor_position(link.anchor);// _get_slot_pos(c.dst_node,true,c.dst_input);
+				Point2 dest = state_machine->get_node(link.node)->get_position() + state_machine->get_node(link.node)->get_input_anchor_position(link.anchor);// _get_slot_pos(c.dst_node,true,c.dst_input);
 				Color col = Color(1,1,0.5,0.8);
 
-				_draw_cos_line(p_node.get_output_anchor_position(i),dest,col);
+				_draw_cos_line(p_node.get_output_anchor_position(i) + p_node.get_position() , dest, col);
 			}
 		}
 	}
@@ -1346,6 +1346,8 @@ StateMachineEditor::StateMachineEditor() {
 	add_child(add_menu);
 
 	p = add_menu->get_popup();
+
+	
 	p->add_item("Animation Node", 0);
 
 	/*

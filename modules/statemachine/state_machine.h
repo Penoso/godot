@@ -95,7 +95,7 @@ public:
 	StateMachineNode *get_node(uint16_t node);
 	StateMachineSchema::NodeSchema *get_node_schema(uint16_t node);
 	bool connect(StateMachineNode *source,int source_anchor, StateMachineNode *dest,int dest_anchor );
-	
+	const StateMachineSchema *get_schema() { return schema; }
 
 protected:
 

@@ -139,7 +139,7 @@ class StateMachineEditor : public Control {
 	void _filter_edited();
 	void _find_paths_for_filter(const StringName& p_node, Set<String>& paths);
 	void _edit_filters();
-
+	
 
 	//void _edit_oneshot_start();
 	//void _edit_dialog_animation_changed();
@@ -160,6 +160,7 @@ protected:
 	void _notification(int p_what);
 	void _input_event(InputEvent p_event);
 	static void _bind_methods();
+	void _create_menu();
 public:
 
 

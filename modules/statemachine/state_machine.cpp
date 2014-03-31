@@ -383,16 +383,16 @@ StateMachineNode *StateMachine::add_node(StateMachineSchema::SM_NODETYPE type)
 	n = memnew( StateMachineNode() );
 	n->id = node_guid++;
 	n->type = type;
-	n->name = schema->GetNode(type)->name;
+	n->name = schema->get_node(type)->name;
 
 	// This should be moved to the constructor
-	n->inputAnchors.resize(schema->GetNode(type)->inAnchors.size());
-	for(int i=0;i<schema->GetNode(type)->inAnchors.size();i++)
+	n->inputAnchors.resize(schema->get_node(type)->inAnchors.size());
+	for(int i=0;i<schema->get_node(type)->inAnchors.size();i++)
 	{
 		n->inputAnchors.set(i,memnew(StateMachine_Anchor));		
 	}
-	n->outputAnchors.resize(schema->GetNode(type)->outAnchors.size());
-	for(int i=0;i<schema->GetNode(type)->outAnchors.size();i++)
+	n->outputAnchors.resize(schema->get_node(type)->outAnchors.size());
+	for(int i=0;i<schema->get_node(type)->outAnchors.size();i++)
 	{
 		n->outputAnchors.set(i,memnew(StateMachine_Anchor));		
 	}
@@ -416,7 +416,7 @@ StateMachineNode *StateMachine::get_node(uint16_t node)
 
 StateMachineSchema::NodeSchema *StateMachine::get_node_schema(uint16_t node)
 {
-	return schema->GetNode(node);
+	return schema->get_node(node);
 
 }
 

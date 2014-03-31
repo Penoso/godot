@@ -110,10 +110,20 @@ public:
 		
 	};
 
-	NodeSchema *GetNode(SM_NODETYPE id)
+	NodeSchema *get_node(SM_NODETYPE id)
 	{
 		return node_map[id];
 	};
+
+	void get_node_list(List<NodeSchema *> *p_node_list) const
+	{
+	
+		for (Map<SM_NODETYPE,NodeSchema*>::Element *E = node_map.front(); E; E = E->next()) {
+
+			p_node_list->push_back(E->value());
+		}
+
+	}
 
 private:
 	Map<SM_NODETYPE,NodeSchema*> node_map;

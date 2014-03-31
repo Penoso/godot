@@ -58,6 +58,9 @@ void StateMachineEditor::edit(StateMachine* p_state_machine) {
 		}*/
 		//play_button->set_pressed(p_state_machine->is_active());
 		//read the orders
+		_create_menu();
+
+
 	}
 
 }
@@ -1331,12 +1334,44 @@ void StateMachineEditor::_bind_methods() {
 	ObjectTypeDB::bind_method("_filter_edited", &StateMachineEditor::_filter_edited);
 
 }
+void StateMachineEditor::_create_menu()
+{
+	PopupMenu *p;
+	// add_menu->
+	p = add_menu->get_popup();
+
+	const StateMachineSchema *smschema = state_machine->get_schema();
+
+	List<StateMachineSchema::NodeSchema *> nodetypes;
+	smschema->get_node_list(&nodetypes);
+
+	for(int n=0;n<nodetypes.size();n++)
+	{	
+		p->add_item(nodetypes[n]->name, n);
+	}
+
+	
+	p->add_item("OneShot Node",0);
+	/*p->add_item("Mix Node", StateMachine::NODE_MIX);
+	p->add_item("Blend2 Node", StateMachine::NODE_BLEND2);
+	p->add_item("Blend3 Node", StateMachine::NODE_BLEND3);
+	p->add_item("Blend4 Node", StateMachine::NODE_BLEND4);
+	p->add_item("TimeScale Node", StateMachine::NODE_TIMESCALE);
+	p->add_item("TimeSeek Node", StateMachine::NODE_TIMESEEK);
+	p->add_item("Transition Node", StateMachine::NODE_TRANSITION);*/
+	//p->add_separator();
+	//p->add_item("Import Animations...", MENU_IMPORT_ANIMATIONS); // wtf
+	//p->add_separator();
+	//p->add_item("Clear", MENU_GRAPH_CLEAR);
+
+	p->connect("item_pressed", this, "_add_menu_item");
+}
 
 StateMachineEditor::StateMachineEditor() {
 
 	set_focus_mode(FOCUS_ALL);
 
-	PopupMenu *p;
+	
 	List<PropertyInfo> defaults;
 
 	add_menu = memnew(MenuButton);
@@ -1345,26 +1380,7 @@ StateMachineEditor::StateMachineEditor() {
 	add_menu->set_size(Point2(25, 15));
 	add_child(add_menu);
 
-	p = add_menu->get_popup();
 
-	
-	p->add_item("Animation Node", 0);
-
-	/*
-	p->add_item("OneShot Node", StateMachine::NODE_ONESHOT);
-	p->add_item("Mix Node", StateMachine::NODE_MIX);
-	p->add_item("Blend2 Node", StateMachine::NODE_BLEND2);
-	p->add_item("Blend3 Node", StateMachine::NODE_BLEND3);
-	p->add_item("Blend4 Node", StateMachine::NODE_BLEND4);
-	p->add_item("TimeScale Node", StateMachine::NODE_TIMESCALE);
-	p->add_item("TimeSeek Node", StateMachine::NODE_TIMESEEK);
-	p->add_item("Transition Node", StateMachine::NODE_TRANSITION);*/
-	p->add_separator();
-	p->add_item("Import Animations...", MENU_IMPORT_ANIMATIONS); // wtf
-	p->add_separator();
-	p->add_item("Clear", MENU_GRAPH_CLEAR);
-
-	p->connect("item_pressed", this, "_add_menu_item");
 
 //	play_button = memnew(Button);
 //	play_button->set_pos(Point2(25, 0));

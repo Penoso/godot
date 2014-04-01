@@ -485,7 +485,7 @@ void StateMachineEditor::_popup_edit_dialog() {
 void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 
 	RID ci = get_canvas_item();
-	//StateMachine::NodeType type = state_machine->node_get_type(p_node);
+	
 	StateMachineSchema::NodeSchema *nodeschema = state_machine->get_node_schema(p_node.type);
 	Ref<StyleBox> style = get_stylebox("panel", "PopupMenu");
 	Ref<Font> font = get_font("font", "PopupMenu");
@@ -546,17 +546,6 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 
 			ofs.y += h;
 
-			/*int links = p_node.get_input_anchors()->get(i)->links.size();
-			for(int j=0; j<links; j++)
-			{
-				StateMachine_Link link = p_node.get_input_anchors()->get(j)->links.get(j);
-
-
-				Point2 dest = state_machine->get_node(link.node)->get_output_anchor_position(link.anchor);// _get_slot_pos(c.dst_node,true,c.dst_input);
-				Color col = Color(1,1,0.5,0.8);
-
-				_draw_cos_line(p_node.get_input_anchor_position(i),dest,col);
-			}*/
 		}
 	}
 	else {
@@ -584,13 +573,13 @@ void StateMachineEditor::_draw_node(const StateMachineNode &p_node) {
 			int links = p_node.get_output_anchors()->get(i)->links.size();
 			for(int j=0; j<links; j++)
 			{
-				StateMachine_Link link =  p_node.get_output_anchors()->get(j)->links.get(j);
+				StateMachine_Link link =  p_node.get_output_anchors()->get(i)->links.get(j);
 				
 				
 				Point2 dest = state_machine->get_node(link.node)->get_position() + state_machine->get_node(link.node)->get_input_anchor_position(link.anchor);// _get_slot_pos(c.dst_node,true,c.dst_input);
 				Color col = Color(1,1,0.5,0.8);
 
-				_draw_cos_line(p_node.get_output_anchor_position(i) + p_node.get_position() , dest, col);
+				_draw_cos_line(p_node.get_output_anchor_position(i) + pos , dest, col);
 			}
 		}
 	}
@@ -1137,7 +1126,7 @@ StringName StateMachineEditor::_add_node(int p_item) {
 	}
 
 	*/
-	StateMachineNode *node = state_machine->add_node(0);
+	StateMachineNode *node = state_machine->add_node(p_item);
 	node->pos = Point2(last_x, last_y);
 	/*(StateMachine::NodeType)p_item, name);
 	state_machine->node_set_pos(name, Point2(last_x, last_y));
@@ -1350,8 +1339,6 @@ void StateMachineEditor::_create_menu()
 		p->add_item(nodetypes[n]->name, n);
 	}
 
-	
-	p->add_item("OneShot Node",0);
 	/*p->add_item("Mix Node", StateMachine::NODE_MIX);
 	p->add_item("Blend2 Node", StateMachine::NODE_BLEND2);
 	p->add_item("Blend3 Node", StateMachine::NODE_BLEND3);

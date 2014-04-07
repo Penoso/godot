@@ -36,7 +36,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <NMakeBuildCommandLine>"$(VSInstallDir)vc\vcvarsall.bat" &amp;&amp; "$(VSInstallDir)vc\bin\vcvars32.bat" &amp;&amp; scons.bat bin/godot.exe  bin/godot.pdb target=debug</NMakeBuildCommandLine>
+    <NMakeBuildCommandLine>"$(VSInstallDir)vc\vcvarsall.bat" &amp;&amp; "$(VSInstallDir)vc\bin\vcvars32.bat" &amp;&amp; scons.bat bin/godot.exe  bin/godot.pdb target=debug spawn_jobs=no</NMakeBuildCommandLine>
     <NMakeOutput>Godot.exe</NMakeOutput>
     <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
   </PropertyGroup>

@@ -244,46 +244,23 @@ void StateMachine::_notification(int p_what) {
 
 	switch(p_what) {
 		/*
-		case NOTIFICATION_ENTER_WORLD: {
-
-			_update_area_instances();
-
-			for(Map<OctantKey,Octant*>::Element *E=octant_map.front();E;E=E->next()) {
-//				IndexKey ik;
-//				ik.key = E->key().indexkey;
-				_octant_enter_world(E->key());
-				_octant_update(E->key());
+		case NOTIFICATION_READY: {
+			dirty_caches=true;
+			if (master!=NodePath()) {
+				_update_sources();
 			}
-
-			awaiting_update=false;
-
-			last_transform=get_global_transform();
+		} break;*/
+		case NOTIFICATION_PROCESS: {
+				_process();
 		} break;
-		case NOTIFICATION_TRANSFORM_CHANGED: {
+		
 
-			Transform new_xform = get_global_transform();
-			if (new_xform==last_transform)
-				break;
-			//update run
-			for(Map<OctantKey,Octant*>::Element *E=octant_map.front();E;E=E->next()) {
-				_octant_transform(E->key());
-			}
+	}
+}
 
-			last_transform=new_xform;
-
-		} break;
-		case NOTIFICATION_EXIT_WORLD: {
-
-			for(Map<OctantKey,Octant*>::Element *E=octant_map.front();E;E=E->next()) {
-				_octant_exit_world(E->key());
-			}
-
-			//_queue_dirty_map(MAP_DIRTY_INSTANCES|MAP_DIRTY_TRANSFORMS);
-			//_update_dirty_map_callback();
-			//_update_area_instances();
-
-		} break;
-*/	}
+void StateMachine::_process()
+{
+	
 }
 
 bool StateMachine::connect(StateMachineNode *source,int source_anchor, StateMachineNode *dest,int dest_anchor )
@@ -305,23 +282,7 @@ bool StateMachine::connect(StateMachineNode *source,int source_anchor, StateMach
 
 void StateMachine::resource_changed(const RES& p_res) {
 
-	//_recreate_octant_data();
 }
-
-/*
-void StateMachine::_update_dirty_map_callback() {
-
-	if (!awaiting_update)
-		return;
-
-	for(Map<OctantKey,Octant*>::Element *E=octant_map.front();E;E=E->next()) {
-		_octant_update(E->key());
-	}
-
-
-	awaiting_update=false;
-
-}*/
 
 
 void StateMachine::_bind_methods() {

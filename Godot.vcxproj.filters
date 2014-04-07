@@ -427,15 +427,6 @@
     <Filter Include="scene\resources\default_theme">
       <UniqueIdentifier>{87e71f00-9474-402a-8a66-db0c5e7c8478}</UniqueIdentifier>
     </Filter>
-    <Filter Include="script">
-      <UniqueIdentifier>{ca6a5ea2-de3a-46ac-9aee-71251a0f0dad}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="script\gdscript">
-      <UniqueIdentifier>{3615f158-a5f0-43f6-8150-e0254a7b1c07}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="script\multiscript">
-      <UniqueIdentifier>{d55ff6ba-27b5-4582-923d-c8ee017b6525}</UniqueIdentifier>
-    </Filter>
     <Filter Include="servers">
       <UniqueIdentifier>{f4720589-f541-40a2-a81e-96ef0413ebbb}</UniqueIdentifier>
     </Filter>
@@ -591,6 +582,12 @@
     </Filter>
     <Filter Include="modules\statemachine">
       <UniqueIdentifier>{8338a6db-2cdd-4bcf-8ece-ff22c6b4d845}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="modules\gdscript">
+      <UniqueIdentifier>{aad43e16-df35-43b2-b946-a54506473222}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="modules\multiscript">
+      <UniqueIdentifier>{9d2fcc1f-d6d0-4c5b-8271-ff564fbc1a2d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -2595,36 +2592,6 @@
     <ClCompile Include="scene\scene_string_names.cpp">
       <Filter>scene</Filter>
     </ClCompile>
-    <ClCompile Include="script\gdscript\gd_compiler.cpp">
-      <Filter>script\gdscript</Filter>
-    </ClCompile>
-    <ClCompile Include="script\gdscript\gd_editor.cpp">
-      <Filter>script\gdscript</Filter>
-    </ClCompile>
-    <ClCompile Include="script\gdscript\gd_functions.cpp">
-      <Filter>script\gdscript</Filter>
-    </ClCompile>
-    <ClCompile Include="script\gdscript\gd_parser.cpp">
-      <Filter>script\gdscript</Filter>
-    </ClCompile>
-    <ClCompile Include="script\gdscript\gd_pretty_print.cpp">
-      <Filter>script\gdscript</Filter>
-    </ClCompile>
-    <ClCompile Include="script\gdscript\gd_script.cpp">
-      <Filter>script\gdscript</Filter>
-    </ClCompile>
-    <ClCompile Include="script\gdscript\gd_tokenizer.cpp">
-      <Filter>script\gdscript</Filter>
-    </ClCompile>
-    <ClCompile Include="script\multiscript\multi_script.cpp">
-      <Filter>script\multiscript</Filter>
-    </ClCompile>
-    <ClCompile Include="script\register_script_types.cpp">
-      <Filter>script</Filter>
-    </ClCompile>
-    <ClCompile Include="script\script_binder.cpp">
-      <Filter>script</Filter>
-    </ClCompile>
     <ClCompile Include="servers\audio\audio_driver_dummy.cpp">
       <Filter>servers\audio</Filter>
     </ClCompile>
@@ -3647,6 +3614,30 @@
     </ClCompile>
     <ClCompile Include="modules\statemachine\state_machine_editor_plugin.cpp">
       <Filter>modules\statemachine</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\gdscript\gd_compiler.cpp">
+      <Filter>modules\gdscript</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\gdscript\gd_editor.cpp">
+      <Filter>modules\gdscript</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\gdscript\gd_functions.cpp">
+      <Filter>modules\gdscript</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\gdscript\gd_parser.cpp">
+      <Filter>modules\gdscript</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\gdscript\gd_pretty_print.cpp">
+      <Filter>modules\gdscript</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\gdscript\gd_script.cpp">
+      <Filter>modules\gdscript</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\gdscript\gd_tokenizer.cpp">
+      <Filter>modules\gdscript</Filter>
+    </ClCompile>
+    <ClCompile Include="modules\gdscript\register_types.cpp">
+      <Filter>modules\gdscript</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -5780,33 +5771,6 @@
     <ClInclude Include="scene\scene_string_names.h">
       <Filter>scene</Filter>
     </ClInclude>
-    <ClInclude Include="script\gdscript\gd_compiler.h">
-      <Filter>script\gdscript</Filter>
-    </ClInclude>
-    <ClInclude Include="script\gdscript\gd_functions.h">
-      <Filter>script\gdscript</Filter>
-    </ClInclude>
-    <ClInclude Include="script\gdscript\gd_parser.h">
-      <Filter>script\gdscript</Filter>
-    </ClInclude>
-    <ClInclude Include="script\gdscript\gd_pretty_print.h">
-      <Filter>script\gdscript</Filter>
-    </ClInclude>
-    <ClInclude Include="script\gdscript\gd_script.h">
-      <Filter>script\gdscript</Filter>
-    </ClInclude>
-    <ClInclude Include="script\gdscript\gd_tokenizer.h">
-      <Filter>script\gdscript</Filter>
-    </ClInclude>
-    <ClInclude Include="script\multiscript\multi_script.h">
-      <Filter>script\multiscript</Filter>
-    </ClInclude>
-    <ClInclude Include="script\register_script_types.h">
-      <Filter>script</Filter>
-    </ClInclude>
-    <ClInclude Include="script\script_binder.h">
-      <Filter>script</Filter>
-    </ClInclude>
     <ClInclude Include="servers\audio\audio_driver_dummy.h">
       <Filter>servers\audio</Filter>
     </ClInclude>
@@ -6986,6 +6950,27 @@
     <ClInclude Include="modules\statemachine\state_machine_schema.h">
       <Filter>modules\statemachine</Filter>
     </ClInclude>
+    <ClInclude Include="modules\gdscript\gd_compiler.h">
+      <Filter>modules\gdscript</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\gdscript\gd_functions.h">
+      <Filter>modules\gdscript</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\gdscript\gd_parser.h">
+      <Filter>modules\gdscript</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\gdscript\gd_pretty_print.h">
+      <Filter>modules\gdscript</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\gdscript\gd_script.h">
+      <Filter>modules\gdscript</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\gdscript\gd_tokenizer.h">
+      <Filter>modules\gdscript</Filter>
+    </ClInclude>
+    <ClInclude Include="modules\gdscript\register_types.h">
+      <Filter>modules\gdscript</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="core\make_binders.py">
@@ -7124,6 +7109,12 @@
     <None Include="version.py" />
     <None Include="modules\statemachine\config.py">
       <Filter>modules\statemachine</Filter>
+    </None>
+    <None Include="modules\gdscript\config.py">
+      <Filter>modules\gdscript</Filter>
+    </None>
+    <None Include="modules\gdscript\SCsub">
+      <Filter>modules\gdscript</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

@@ -44,13 +44,11 @@ struct StateMachine_Anchor {
 	Vector<StateMachine_Link> links;
 };
 
-struct StateMachineNode {
 
-	int16_t id;
-	StateMachineSchema::SM_NODETYPE type;
-	Point2 pos;
-	String name;
-
+class StateMachineNode {
+public:
+	StateMachineNode() {};
+	virtual ~StateMachineNode() { }
 
 	bool CanTransition();
 	void OnEnter();
@@ -69,12 +67,17 @@ struct StateMachineNode {
 	Point2 get_output_anchor_position(int index) const { return Point2(150.0f,50.0f + (index * 10.0f));}
 	const Vector<StateMachine_Anchor *> *get_output_anchors() const {return &outputAnchors;}
 
+
+// Clean up later...
+public:
+	int16_t id;
+	StateMachineSchema::SM_NODETYPE type;
+	Point2 pos;
+	String name;
 	Vector<StateMachine_Anchor *> inputAnchors;
 	Vector<StateMachine_Anchor *> outputAnchors;
-
-
-	StateMachineNode() {};
-	virtual ~StateMachineNode() { }
+	//GDScript script;
+	String scriptsource;
 };
 
 class StateMachine : public Node {
@@ -86,8 +89,7 @@ public:
 
 	bool awaiting_update;
 
-	// void _queue_dirty_map();
-	// void _update_dirty_map_callback();
+
 public:
 	StateMachineNode *add_node(StateMachineSchema::SM_NODETYPE type);
 	void resource_changed(const RES& p_res);
@@ -106,6 +108,8 @@ protected:
 	void _notification(int p_what);
 	static void _bind_methods();
 
+	void _process();
+
 public:
 
 	
@@ -122,6 +126,7 @@ private:
 
 	StateMachineSchema *schema;
 	int node_guid;
+	int16_t current_node;
 
 };
 

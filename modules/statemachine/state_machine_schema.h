@@ -28,7 +28,7 @@
 /*************************************************************************/
 #ifndef STATE_MACHINE_SCHEMA_H
 #define STATE_MACHINE_SCHEMA_H
-
+#include "modules/gdscript/gd_script.h"
 
 class StateMachineSchema {
 public:
@@ -64,8 +64,9 @@ public:
 		Point2 size;
 		Color color;
 
-		/* script this?		
-		String script;*/
+	private:		
+		String scriptcode;
+		GDScript script;
 		
 	};
 

@@ -1492,7 +1492,7 @@ void StateMachineEditorPlugin::edit(Object *p_object) {
 
 bool StateMachineEditorPlugin::handles(Object *p_object) const {
 
-	return p_object->is_type("StateMachine");
+	return p_object->is_type("StateMachine") || p_object->is_type("ScriptStateMachine");
 }
 
 void StateMachineEditorPlugin::make_visible(bool p_visible) {

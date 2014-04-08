@@ -76,7 +76,9 @@ public:
 	String name;
 	Vector<StateMachine_Anchor *> inputAnchors;
 	Vector<StateMachine_Anchor *> outputAnchors;
+	Map<String,Variant> parameters;
 	//GDScript script;
+	GDInstance *scriptinstance;
 	String scriptsource;
 };
 
@@ -117,7 +119,7 @@ public:
 	~StateMachine();
 
 
-private:
+protected:
 	Map<uint16_t,StateMachineNode*> node_map;
 	enum {
 

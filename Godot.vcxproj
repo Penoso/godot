@@ -1523,6 +1523,7 @@
     <ClInclude Include="modules\gridmap\register_types.h" />
     <ClInclude Include="modules\register_module_types.h" />
     <ClInclude Include="modules\statemachine\register_types.h" />
+    <ClInclude Include="modules\statemachine\script_state_machine.h" />
     <ClInclude Include="modules\statemachine\state_machine.h" />
     <ClInclude Include="modules\statemachine\state_machine_editor_plugin.h" />
     <ClInclude Include="modules\statemachine\state_machine_schema.h" />

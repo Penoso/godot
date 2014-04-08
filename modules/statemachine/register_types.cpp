@@ -28,12 +28,13 @@
 /*************************************************************************/
 #include "register_types.h"
 #include "object_type_db.h"
+#include "script_state_machine.h"
 #include "state_machine.h"
 #include "state_machine_editor_plugin.h"
 
 void register_statemachine_types() {
 
-	ObjectTypeDB::register_type<StateMachine>();
+	ObjectTypeDB::register_type<ScriptStateMachine>();
 #ifdef TOOLS_ENABLED
 	EditorPlugins::add_by_type<StateMachineEditorPlugin>();
 #endif

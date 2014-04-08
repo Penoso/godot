@@ -6971,6 +6971,9 @@
     <ClInclude Include="modules\gdscript\register_types.h">
       <Filter>modules\gdscript</Filter>
     </ClInclude>
+    <ClInclude Include="modules\statemachine\script_state_machine.h">
+      <Filter>modules\statemachine</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="core\make_binders.py">

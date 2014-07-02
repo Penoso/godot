@@ -204,6 +204,20 @@ void OS_X11::initialize(const VideoMode& p_desired,int p_video_driver,int p_audi
 
 	XChangeWindowAttributes(x11_display, x11_window,CWEventMask,&new_attr);
 	
+    XClassHint* classHint;
+
+    /* set the titlebar name */
+    XStoreName(x11_display, x11_window, "Godot");
+
+    /* set the name and class hints for the window manager to use */
+    classHint = XAllocClassHint();
+    if (classHint) {
+        classHint->res_name = "Godot";
+        classHint->res_class = "Godot";
+    }
+    XSetClassHint(x11_display, x11_window, classHint);
+    XFree(classHint);
+
 	wm_delete = XInternAtom(x11_display, "WM_DELETE_WINDOW", true);	
 	XSetWMProtocols(x11_display, x11_window, &wm_delete, 1);
 		
@@ -480,7 +494,7 @@ unsigned int OS_X11::get_mouse_button_state(unsigned int p_x11_state) {
 	return state;
 }
 	
-void OS_X11::handle_key_event(XKeyEvent *p_event) {
+void OS_X11::handle_key_event(XKeyEvent *p_event, bool p_echo) {
 
 			
 	// X11 functions don't know what const is
@@ -591,17 +605,9 @@ void OS_X11::handle_key_event(XKeyEvent *p_event) {
 	// To detect them, i use XPeekEvent and check that their
 	// difference in time is below a treshold.
 	
-	bool echo=false;
-	
-	if (xkeyevent->type == KeyPress) {
-			
-		// saved the time of the last keyrelease to see
-		// if it's the same as this keypress.
-		if (xkeyevent->time==last_keyrelease_time)
-			echo=true;
 
-	} else {
-	
+	if (xkeyevent->type != KeyPress) {
+				
 		// make sure there are events pending,
 		// so this call won't block.
 		if (XPending(x11_display)>0) {
@@ -615,17 +621,21 @@ void OS_X11::handle_key_event(XKeyEvent *p_event) {
 			// not very helpful today.
 			
 			::Time tresh=ABS(peek_event.xkey.time-xkeyevent->time);
-			if (peek_event.type == KeyPress && tresh<5 )
-				echo=true;
+			if (peek_event.type == KeyPress && tresh<5 ) {
+				KeySym rk;
+				nbytes=XLookupString((XKeyEvent*)&peek_event, str, 256, &rk, NULL);
+				if (rk==keysym_keycode) {
+					XEvent event;
+					XNextEvent(x11_display, &event); //erase next event
+					handle_key_event( (XKeyEvent*)&event,true );
+					return; //ignore current, echo next
+				}
+			}
 				
 			// use the time from peek_event so it always works
-			last_keyrelease_time=peek_event.xkey.time;
-		} else {
-			last_keyrelease_time=xkeyevent->time;
 		}
 	
-		// save the time to check for echo when keypress happens
-		
+		// save the time to check for echo when keypress happens		
 	}
 	
 	
@@ -643,7 +653,7 @@ void OS_X11::handle_key_event(XKeyEvent *p_event) {
 
 	event.key.scancode=keycode;
 	event.key.unicode=unicode;
-	event.key.echo=echo;
+	event.key.echo=p_echo;
 
 	if (event.key.scancode==KEY_BACKTAB) {
 		//make it consistent accross platforms.
@@ -1015,6 +1025,11 @@ String OS_X11::get_name() {
 	return "X11";
 }
 
+Error OS_X11::shell_open(String p_uri) {
+
+	return ERR_UNAVAILABLE;
+}
+
 
 void OS_X11::close_joystick(int p_id) {
 
@@ -1226,8 +1241,6 @@ void OS_X11::set_icon(const Image& p_icon) {
 		Vector<long> pd;
 
 		pd.resize(2+w*h);
-
-		print_line("***** SET ICON ***** "+itos(w)+"  "+itos(h));
 
 		pd[0]=w;
 		pd[1]=h;

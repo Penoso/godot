@@ -199,7 +199,7 @@ Error ColladaImport::_create_scene(Collada::Node *p_node, Spatial *p_parent) {
 						return OK;
 					//well, it's an ambient light..
 					Light *l = memnew( DirectionalLight );
-					l->set_color(Light::COLOR_AMBIENT,ld.color);
+//					l->set_color(Light::COLOR_AMBIENT,ld.color);
 					l->set_color(Light::COLOR_DIFFUSE,Color(0,0,0));
 					l->set_color(Light::COLOR_SPECULAR,Color(0,0,0));
 					node = l;
@@ -208,8 +208,8 @@ Error ColladaImport::_create_scene(Collada::Node *p_node, Spatial *p_parent) {
 
 					//well, it's an ambient light..
 					Light *l = memnew( DirectionalLight );
-					if (found_ambient) //use it here
-						l->set_color(Light::COLOR_AMBIENT,ambient);
+					//if (found_ambient) //use it here
+					//	l->set_color(Light::COLOR_AMBIENT,ambient);
 
 					l->set_color(Light::COLOR_DIFFUSE,ld.color);
 					l->set_color(Light::COLOR_SPECULAR,Color(1,1,1));
@@ -290,6 +290,7 @@ Error ColladaImport::_create_scene(Collada::Node *p_node, Spatial *p_parent) {
 			} else {
 				//mesh since nothing else
 				node = memnew( MeshInstance );
+				node->cast_to<MeshInstance>()->set_flag(GeometryInstance::FLAG_USE_BAKED_LIGHT,true);
 			}
 		} break;
 		case Collada::Node::TYPE_SKELETON: {
@@ -339,6 +340,11 @@ Error ColladaImport::_create_material(const String& p_target) {
 	Collada::Effect &effect=collada.state.effect_map[src_mat.instance_effect];
 
 	Ref<FixedMaterial> material= memnew( FixedMaterial );
+
+	if (src_mat.name!="")
+		material->set_name(src_mat.name);
+	else if (effect.name!="")
+		material->set_name(effect.name);
 
 	// DIFFUSE
 
@@ -423,6 +429,8 @@ Error ColladaImport::_create_material(const String& p_target) {
 
 	material->set_parameter(FixedMaterial::PARAM_SPECULAR_EXP,effect.shininess);
 	material->set_flag(Material::FLAG_DOUBLE_SIDED,effect.double_sided);
+
+
 
 	material_cache[p_target]=material;
 	return OK;
@@ -515,9 +523,9 @@ static void _generate_tangents_and_binormals(const DVector<int>& p_indices,const
 			tangent=Vector3();
 		} else {
 			tangent = Vector3((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
-			(t2 * z1 - t1 * z2) * r);
+			(t2 * z1 - t1 * z2) * r).normalized();
 			binormal = Vector3((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
-			(s1 * z2 - s2 * z1) * r);
+			(s1 * z2 - s2 * z1) * r).normalized();
 		}
 
 		tangents[ index_arrayr[idx*3+0] ]+=tangent;
@@ -527,6 +535,8 @@ static void _generate_tangents_and_binormals(const DVector<int>& p_indices,const
 		tangents[ index_arrayr[idx*3+2] ]+=tangent;
 		binormals[ index_arrayr[idx*3+2] ]+=binormal;
 
+		//print_line(itos(idx)+" tangent: "+tangent);
+		//print_line(itos(idx)+" binormal: "+binormal);
 	}
 
 	r_tangents.resize(vlen*4);
@@ -658,7 +668,7 @@ Error ColladaImport::_create_mesh_surfaces(Ref<Mesh>& p_mesh,const Map<String,Co
 		const Collada::MeshData::Source *color_src=NULL;
 		int color_ofs=0;
 
-		if (false && p.sources.has("COLOR")) {
+		if (p.sources.has("COLOR")) {
 
 			String color_source_id = p.sources["COLOR"].source;
 			color_ofs = p.sources["COLOR"].offset;
@@ -2107,7 +2117,7 @@ void EditorSceneImporterCollada::get_extensions(List<String> *r_extensions) cons
 
 	r_extensions->push_back("dae");
 }
-Node* EditorSceneImporterCollada::import_scene(const String& p_path,uint32_t p_flags,Error* r_err) {
+Node* EditorSceneImporterCollada::import_scene(const String& p_path, uint32_t p_flags, List<String> *r_missing_deps, Error* r_err) {
 
 
 	ColladaImport state;
@@ -2122,12 +2132,19 @@ Node* EditorSceneImporterCollada::import_scene(const String& p_path,uint32_t p_f
 
 	if (state.missing_textures.size()) {
 
-		for(int i=0;i<state.missing_textures.size();i++) {
-			EditorNode::add_io_error("Texture Not Found: "+state.missing_textures[i]);
-		}
+		//for(int i=0;i<state.missing_textures.size();i++) {
+//			EditorNode::add_io_error("Texture Not Found: "+state.missing_textures[i]);
+//		}
 
-		if (p_flags&IMPORT_FAIL_ON_MISSING_DEPENDENCIES)
-			return NULL;
+
+		if (r_missing_deps) {
+
+			for(int i=0;i<state.missing_textures.size();i++) {
+				//EditorNode::add_io_error("Texture Not Found: "+state.missing_textures[i]);
+				r_missing_deps->push_back(state.missing_textures[i]);
+			}
+
+		}
 	}
 
 	if (p_flags&IMPORT_ANIMATION) {

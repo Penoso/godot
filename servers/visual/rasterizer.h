@@ -51,10 +51,11 @@ protected:
 		struct {
 			uint16_t texcoord_mask;
 			uint8_t texture_mask;
-			uint8_t detail_blend:2;
+			uint8_t light_shader:2;
 			bool use_alpha:1;
 			bool use_color_array:1;
 			bool use_pointsize:1;
+			bool discard_alpha:1;
 			bool valid:1;
 		};
 
@@ -80,10 +81,11 @@ protected:
 		RID self;
 		bool use_alpha;
 		bool use_color_array;
+		bool discard_alpha;
 		bool use_pointsize;
 		float point_size;
 		Transform uv_xform;
-		VS::MaterialBlendMode detail_blend;
+		VS::FixedMaterialLightShader light_shader;
 		RID texture[VS::FIXED_MATERIAL_PARAM_MAX];
 		Variant param[VS::FIXED_MATERIAL_PARAM_MAX];
 		VS::FixedMaterialTexCoordMode texture_tc[VS::FIXED_MATERIAL_PARAM_MAX];
@@ -100,7 +102,8 @@ protected:
 			k.use_alpha=use_alpha;
 			k.use_color_array=use_color_array;
 			k.use_pointsize=use_pointsize;
-			k.detail_blend=detail_blend;
+			k.discard_alpha=discard_alpha;
+			k.light_shader=light_shader;
 			k.valid=true;
 			for(int i=0;i<VS::FIXED_MATERIAL_PARAM_MAX;i++) {
 				if (texture[i].is_valid()) {
@@ -119,8 +122,9 @@ protected:
 			use_alpha=false;
 			use_color_array=false;
 			use_pointsize=false;
+			discard_alpha=false;
 			point_size=1.0;
-			detail_blend=VS::MATERIAL_BLEND_MODE_MIX;
+			light_shader=VS::FIXED_MATERIAL_LIGHT_SHADER_LAMBERT;
 			for(int i=0;i<VS::FIXED_MATERIAL_PARAM_MAX;i++) {
 				texture_tc[i]=VS::FIXED_MATERIAL_TEXCOORD_UV;
 			}
@@ -153,6 +157,17 @@ protected:
 	void _free_fixed_material(const RID& p_material);
 
 public:
+
+	enum ShadowFilterTechnique {
+		SHADOW_FILTER_NONE,
+		SHADOW_FILTER_PCF5,
+		SHADOW_FILTER_PCF13,
+		SHADOW_FILTER_ESM,
+		SHADOW_FILTER_VSM,
+	};
+
+
+
 	/* TEXTURE API */
 
 	virtual RID texture_create()=0;
@@ -177,9 +192,10 @@ public:
 	virtual void shader_set_mode(RID p_shader,VS::ShaderMode p_mode)=0;
 	virtual VS::ShaderMode shader_get_mode(RID p_shader) const=0;
 
-	virtual void shader_set_code(RID p_shader, const String& p_vertex, const String& p_fragment,int p_vertex_ofs=0,int p_fragment_ofs=0)=0;
+	virtual void shader_set_code(RID p_shader, const String& p_vertex, const String& p_fragment,const String& p_light,int p_vertex_ofs=0,int p_fragment_ofs=0,int p_light_ofs=0)=0;
 	virtual String shader_get_fragment_code(RID p_shader) const=0;
 	virtual String shader_get_vertex_code(RID p_shader) const=0;
+	virtual String shader_get_light_code(RID p_shader) const=0;
 
 	virtual void shader_get_param_list(RID p_shader, List<PropertyInfo> *p_param_list) const=0;
 
@@ -196,11 +212,8 @@ public:
 	virtual void material_set_flag(RID p_material, VS::MaterialFlag p_flag,bool p_enabled)=0;
 	virtual bool material_get_flag(RID p_material,VS::MaterialFlag p_flag) const=0;
 
-	virtual void material_set_hint(RID p_material, VS::MaterialHint p_hint,bool p_enabled)=0;
-	virtual bool material_get_hint(RID p_material,VS::MaterialHint p_hint) const=0;
-
-	virtual void material_set_shade_model(RID p_material, VS::MaterialShadeModel p_model)=0;
-	virtual VS::MaterialShadeModel material_get_shade_model(RID p_material) const=0;
+	virtual void material_set_depth_draw_mode(RID p_material, VS::MaterialDepthDrawMode p_mode)=0;
+	virtual VS::MaterialDepthDrawMode material_get_depth_draw_mode(RID p_material) const=0;
 
 	virtual void material_set_blend_mode(RID p_material,VS::MaterialBlendMode p_mode)=0;
 	virtual VS::MaterialBlendMode material_get_blend_mode(RID p_material) const=0;
@@ -222,14 +235,14 @@ public:
 	virtual void fixed_material_set_texture(RID p_material,VS::FixedMaterialParam p_parameter, RID p_texture);
 	virtual RID fixed_material_get_texture(RID p_material,VS::FixedMaterialParam p_parameter) const;
 
-	virtual void fixed_material_set_detail_blend_mode(RID p_material,VS::MaterialBlendMode p_mode);
-	virtual VS::MaterialBlendMode fixed_material_get_detail_blend_mode(RID p_material) const;
-
 	virtual void fixed_material_set_texcoord_mode(RID p_material,VS::FixedMaterialParam p_parameter, VS::FixedMaterialTexCoordMode p_mode);
 	virtual VS::FixedMaterialTexCoordMode fixed_material_get_texcoord_mode(RID p_material,VS::FixedMaterialParam p_parameter) const;
 
 	virtual void fixed_material_set_uv_transform(RID p_material,const Transform& p_transform);
 	virtual Transform fixed_material_get_uv_transform(RID p_material) const;
+
+	virtual void fixed_material_set_light_shader(RID p_material,VS::FixedMaterialLightShader p_shader);
+	virtual VS::FixedMaterialLightShader fixed_material_get_light_shader(RID p_material) const;
 
 	virtual void fixed_material_set_point_size(RID p_material,float p_size);
 	virtual float fixed_material_get_point_size(RID p_material) const;
@@ -264,6 +277,9 @@ public:
 		
 	virtual AABB mesh_get_aabb(RID p_mesh) const=0;
 
+	virtual void mesh_set_custom_aabb(RID p_mesh,const AABB& p_aabb)=0;
+	virtual AABB mesh_get_custom_aabb(RID p_mesh) const=0;
+
 	/* MULTIMESH API */
 
 	virtual RID multimesh_create()=0;
@@ -284,6 +300,27 @@ public:
 
 	virtual void multimesh_set_visible_instances(RID p_multimesh,int p_visible)=0;
 	virtual int multimesh_get_visible_instances(RID p_multimesh) const=0;
+
+	/* BAKED LIGHT */
+
+
+
+
+	/* IMMEDIATE API */
+
+	virtual RID immediate_create()=0;
+	virtual void immediate_begin(RID p_immediate,VS::PrimitiveType p_rimitive,RID p_texture=RID())=0;
+	virtual void immediate_vertex(RID p_immediate,const Vector3& p_vertex)=0;
+	virtual void immediate_normal(RID p_immediate,const Vector3& p_normal)=0;
+	virtual void immediate_tangent(RID p_immediate,const Plane& p_tangent)=0;
+	virtual void immediate_color(RID p_immediate,const Color& p_color)=0;
+	virtual void immediate_uv(RID p_immediate,const Vector2& tex_uv)=0;
+	virtual void immediate_uv2(RID p_immediate,const Vector2& tex_uv)=0;
+	virtual void immediate_end(RID p_immediate)=0;
+	virtual void immediate_clear(RID p_immediate)=0;
+	virtual AABB immediate_get_aabb(RID p_immediate) const=0;
+	virtual void immediate_set_material(RID p_immediate,RID p_material)=0;
+	virtual RID immediate_get_material(RID p_immediate) const=0;
 
 	
 	/* PARTICLES API */
@@ -417,6 +454,7 @@ public:
 	virtual int light_instance_get_shadow_passes(RID p_light_instance) const=0;
 	virtual void light_instance_set_shadow_transform(RID p_light_instance, int p_index, const CameraMatrix& p_camera, const Transform& p_transform, float p_split_near=0,float p_split_far=0)=0;
 	virtual int light_instance_get_shadow_size(RID p_light_instance, int p_index=0) const=0;
+	virtual bool light_instance_get_pssm_shadow_overlap(RID p_light_instance) const=0;
 
 	/* SHADOWS */
 
@@ -444,7 +482,7 @@ public:
 	virtual void begin_frame()=0;
 	
 	virtual void set_viewport(const VS::ViewportRect& p_viewport)=0;
-	virtual void set_render_target(RID p_render_target)=0;
+	virtual void set_render_target(RID p_render_target,bool p_transparent_bg=false,bool p_vflip=false)=0;
 	virtual void clear_viewport(const Color& p_color)=0;
 	virtual void capture_viewport(Image* r_capture)=0;
 	
@@ -457,6 +495,21 @@ public:
 	
 	typedef Map<StringName,Variant> ParamOverrideMap;
 
+	struct BakedLightData {
+
+		VS::BakedLightMode mode;
+		RID octree_texture;
+		float color_multiplier; //used for both lightmaps and octree
+		Transform octree_transform;
+		Map<int,RID> lightmaps;
+		//cache
+
+		float octree_lattice_size;
+		float octree_lattice_divide;
+		float texture_multiplier;
+		int octree_steps;
+		Vector2 octree_tex_pixel_size;
+	};
 
 	struct InstanceData {
 
@@ -465,6 +518,8 @@ public:
 		RID material_override;
 		Vector<RID> light_instances;
 		Vector<float> morph_values;
+		BakedLightData *baked_light;
+		Transform *baked_light_octree_xform;
 		bool mirror :8;
 		bool depth_scale :8;
 		bool billboard :8;
@@ -474,6 +529,7 @@ public:
 
 	virtual void add_mesh( const RID& p_mesh, const InstanceData *p_data)=0;
 	virtual void add_multimesh( const RID& p_multimesh, const InstanceData *p_data)=0;
+	virtual void add_immediate( const RID& p_immediate, const InstanceData *p_data)=0;
 	virtual void add_particles( const RID& p_particle_instance, const InstanceData *p_data)=0;
 
 
@@ -494,6 +550,7 @@ public:
 	};
 		
 	virtual void canvas_begin()=0;
+	virtual void canvas_disable_blending()=0;
 	virtual void canvas_set_opacity(float p_opacity)=0;
 	virtual void canvas_set_blend_mode(VS::MaterialBlendMode p_mode)=0;
 	virtual void canvas_begin_rect(const Matrix32& p_transform)=0;;
@@ -530,6 +587,7 @@ public:
 	virtual bool is_material(const RID& p_rid) const=0;
 	virtual bool is_mesh(const RID& p_rid) const=0;
 	virtual bool is_multimesh(const RID& p_rid) const=0;
+	virtual bool is_immediate(const RID& p_rid) const=0;
 	virtual bool is_particles(const RID &p_beam) const=0;
 
 	virtual bool is_light(const RID& p_rid) const=0;

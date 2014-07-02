@@ -285,6 +285,7 @@ ShaderGLES2::Version* ShaderGLES2::get_current_version() {
 	
 	//keep them around during the function
 	CharString code_string;
+	CharString code_string2;
 	CharString code_globals;
 
 
@@ -315,6 +316,7 @@ ShaderGLES2::Version* ShaderGLES2::get_current_version() {
 		for(int i=0;i<cc->custom_defines.size();i++) {
 
 			strings.push_back(cc->custom_defines[i]);
+			DEBUG_PRINT("CD #"+itos(i)+": "+String(cc->custom_defines[i]));
 		}
 	}
 
@@ -349,9 +351,11 @@ ShaderGLES2::Version* ShaderGLES2::get_current_version() {
 
 	strings.push_back(vertex_code2.get_data());
 #ifdef DEBUG_SHADER
+
+	DEBUG_PRINT("\nVertex Code:\n\n"+String(code_string.get_data()));
 	for(int i=0;i<strings.size();i++) {
 
-		print_line("vert strings "+itos(i)+":"+String(strings[i]));
+		//print_line("vert strings "+itos(i)+":"+String(strings[i]));
 	}
 #endif
 
@@ -434,10 +438,19 @@ ShaderGLES2::Version* ShaderGLES2::get_current_version() {
 	}
 
 	strings.push_back(fragment_code2.get_data());
+
+	if (cc) {
+		code_string2=cc->light.ascii();
+		strings.push_back(code_string2.get_data());
+	}
+
+	strings.push_back(fragment_code3.get_data());
+
 #ifdef DEBUG_SHADER
+	DEBUG_PRINT("\nFragment Code:\n\n"+String(code_string.get_data()));
 	for(int i=0;i<strings.size();i++) {
 
-		print_line("frag strings "+itos(i)+":"+String(strings[i]));
+		//print_line("frag strings "+itos(i)+":"+String(strings[i]));
 	}
 #endif
 
@@ -626,6 +639,7 @@ void ShaderGLES2::setup(const char** p_conditional_defines, int p_conditional_co
 	{
 		String globals_tag="\nFRAGMENT_SHADER_GLOBALS";
 		String code_tag="\nFRAGMENT_SHADER_CODE";
+		String light_code_tag="\nLIGHT_SHADER_CODE";
 		String code =  fragment_code;
 		int cpos = code.find(globals_tag);
 		if (cpos==-1) {
@@ -641,7 +655,16 @@ void ShaderGLES2::setup(const char** p_conditional_defines, int p_conditional_co
 			} else {
 
 				fragment_code1=code.substr(0,cpos).ascii();
-				fragment_code2=code.substr(cpos+code_tag.length(),code.length()).ascii();
+				String code2 = code.substr(cpos+code_tag.length(),code.length());
+
+				cpos = code2.find(light_code_tag);
+				if (cpos==-1) {
+					fragment_code2=code2.ascii();
+				} else {
+
+					fragment_code2=code2.substr(0,cpos).ascii();
+					fragment_code3 = code2.substr(cpos+light_code_tag.length(),code2.length()).ascii();
+				}
 			}
 		}
 	}
@@ -692,7 +715,7 @@ uint32_t ShaderGLES2::create_custom_shader() {
 	return last_custom_code++;
 }
 
-void ShaderGLES2::set_custom_shader_code(uint32_t p_code_id, const String& p_vertex, const String& p_vertex_globals,const String& p_fragment, const String& p_fragment_globals,const Vector<StringName>& p_uniforms,const Vector<const char*> &p_custom_defines) {
+void ShaderGLES2::set_custom_shader_code(uint32_t p_code_id, const String& p_vertex, const String& p_vertex_globals,const String& p_fragment,const String& p_light, const String& p_fragment_globals,const Vector<StringName>& p_uniforms,const Vector<const char*> &p_custom_defines) {
 
 	ERR_FAIL_COND(!custom_code_map.has(p_code_id));
 	CustomCode *cc=&custom_code_map[p_code_id];
@@ -701,6 +724,7 @@ void ShaderGLES2::set_custom_shader_code(uint32_t p_code_id, const String& p_ver
 	cc->vertex_globals=p_vertex_globals;
 	cc->fragment=p_fragment;
 	cc->fragment_globals=p_fragment_globals;
+	cc->light=p_light;
 	cc->custom_uniforms=p_uniforms;
 	cc->custom_defines=p_custom_defines;
 	cc->version++;

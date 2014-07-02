@@ -56,6 +56,8 @@ class VisualServer : public Object {
 protected:	
 	RID _make_test_cube();
 	RID test_texture;
+	RID white_texture;
+	RID material_2d[16];
 	
 	static VisualServer* (*create_func)();
 	static void _bind_methods();	
@@ -140,9 +142,10 @@ public:
 	virtual void shader_set_mode(RID p_shader,ShaderMode p_mode)=0;
 	virtual ShaderMode shader_get_mode(RID p_shader) const=0;
 
-	virtual void shader_set_code(RID p_shader, const String& p_vertex, const String& p_fragment,int p_vertex_ofs=0,int p_fragment_ofs=0)=0;
+	virtual void shader_set_code(RID p_shader, const String& p_vertex, const String& p_fragment,const String& p_light, int p_vertex_ofs=0,int p_fragment_ofs=0,int p_light_ofs=0)=0;
 	virtual String shader_get_fragment_code(RID p_shader) const=0;
 	virtual String shader_get_vertex_code(RID p_shader) const=0;
+	virtual String shader_get_light_code(RID p_shader) const=0;
 	virtual void shader_get_param_list(RID p_shader, List<PropertyInfo> *p_param_list) const=0;
 
 
@@ -162,44 +165,29 @@ public:
 		MATERIAL_FLAG_INVERT_FACES, ///< Invert front/back of the object
 		MATERIAL_FLAG_UNSHADED,
 		MATERIAL_FLAG_ONTOP,
-		MATERIAL_FLAG_WIREFRAME,
-		MATERIAL_FLAG_BILLBOARD,
+		MATERIAL_FLAG_LIGHTMAP_ON_UV2,
 		MATERIAL_FLAG_MAX,
 	};
 
 	virtual void material_set_flag(RID p_material, MaterialFlag p_flag,bool p_enabled)=0;
 	virtual bool material_get_flag(RID p_material,MaterialFlag p_flag) const=0;
 
-	enum MaterialShadeModel {
-		MATERIAL_SHADE_MODEL_LAMBERT,
-		MATERIAL_SHADE_MODEL_LAMBERT_WRAP,
-		MATERIAL_SHADE_MODEL_TOON
+	enum MaterialDepthDrawMode {
+		MATERIAL_DEPTH_DRAW_ALWAYS,
+		MATERIAL_DEPTH_DRAW_OPAQUE_ONLY,
+		MATERIAL_DEPTH_DRAW_OPAQUE_PRE_PASS_ALPHA,
+		MATERIAL_DEPTH_DRAW_NEVER
 	};
 
-	/* FIXED MATERIAL */
-
-
-
-	virtual void material_set_shade_model(RID p_material, MaterialShadeModel p_model)=0;
-	virtual MaterialShadeModel material_get_shade_model(RID p_material) const=0;
-
-	enum MaterialHint {
-
-		MATERIAL_HINT_DECAL,
-		MATERIAL_HINT_OPAQUE_PRE_PASS,
-		MATERIAL_HINT_NO_SHADOW,
-		MATERIAL_HINT_NO_DEPTH_DRAW,
-		MATERIAL_HINT_MAX
-	};
-
-	virtual void material_set_hint(RID p_material, MaterialHint p_hint,bool p_enabled)=0;
-	virtual bool material_get_hint(RID p_material,MaterialHint p_hint) const=0;
+	virtual void material_set_depth_draw_mode(RID p_material, MaterialDepthDrawMode p_mode)=0;
+	virtual MaterialDepthDrawMode material_get_depth_draw_mode(RID p_material) const=0;
 
 	enum MaterialBlendMode {
 		MATERIAL_BLEND_MODE_MIX, //default
 		MATERIAL_BLEND_MODE_ADD,
 		MATERIAL_BLEND_MODE_SUB,
-		MATERIAL_BLEND_MODE_MUL
+		MATERIAL_BLEND_MODE_MUL,
+		MATERIAL_BLEND_MODE_PREMULT_ALPHA
 	};
 
 
@@ -240,6 +228,7 @@ public:
 		FIXED_MATERIAL_FLAG_USE_ALPHA,
 		FIXED_MATERIAL_FLAG_USE_COLOR_ARRAY,
 		FIXED_MATERIAL_FLAG_USE_POINT_SIZE,
+		FIXED_MATERIAL_FLAG_DISCARD_ALPHA,
 		FIXED_MATERIAL_FLAG_MAX,
 	};
 
@@ -253,8 +242,19 @@ public:
 	virtual void fixed_material_set_texture(RID p_material,FixedMaterialParam p_parameter, RID p_texture)=0;
 	virtual RID fixed_material_get_texture(RID p_material,FixedMaterialParam p_parameter) const=0;
 
-	virtual void fixed_material_set_detail_blend_mode(RID p_material,MaterialBlendMode p_mode)=0;
-	virtual MaterialBlendMode fixed_material_get_detail_blend_mode(RID p_material) const=0;
+
+	enum FixedMaterialLightShader {
+
+		FIXED_MATERIAL_LIGHT_SHADER_LAMBERT,
+		FIXED_MATERIAL_LIGHT_SHADER_WRAP,
+		FIXED_MATERIAL_LIGHT_SHADER_VELVET,
+		FIXED_MATERIAL_LIGHT_SHADER_TOON,
+
+	};
+
+
+	virtual void fixed_material_set_light_shader(RID p_material,FixedMaterialLightShader p_shader)=0;
+	virtual FixedMaterialLightShader fixed_material_get_light_shader(RID p_material) const=0;
 
 	virtual void fixed_material_set_texcoord_mode(RID p_material,FixedMaterialParam p_parameter, FixedMaterialTexCoordMode p_mode)=0;
 	virtual FixedMaterialTexCoordMode fixed_material_get_texcoord_mode(RID p_material,FixedMaterialParam p_parameter) const=0;
@@ -334,7 +334,10 @@ public:
 	
 	virtual void mesh_remove_surface(RID p_mesh,int p_index)=0;
 	virtual int mesh_get_surface_count(RID p_mesh) const=0;
-		
+
+	virtual void mesh_set_custom_aabb(RID p_mesh,const AABB& p_aabb)=0;
+	virtual AABB mesh_get_custom_aabb(RID p_mesh) const=0;
+
 	/* MULTIMESH API */
 
 	virtual RID multimesh_create()=0;
@@ -356,7 +359,22 @@ public:
 	virtual void multimesh_set_visible_instances(RID p_multimesh,int p_visible)=0;
 	virtual int multimesh_get_visible_instances(RID p_multimesh) const=0;
 
-		
+	/* IMMEDIATE API */
+
+	virtual RID immediate_create()=0;
+	virtual void immediate_begin(RID p_immediate,PrimitiveType p_rimitive,RID p_texture=RID())=0;
+	virtual void immediate_vertex(RID p_immediate,const Vector3& p_vertex)=0;
+	virtual void immediate_normal(RID p_immediate,const Vector3& p_normal)=0;
+	virtual void immediate_tangent(RID p_immediate,const Plane& p_tangent)=0;
+	virtual void immediate_color(RID p_immediate,const Color& p_color)=0;
+	virtual void immediate_uv(RID p_immediate,const Vector2& tex_uv)=0;
+	virtual void immediate_uv2(RID p_immediate,const Vector2& tex_uv)=0;
+	virtual void immediate_end(RID p_immediate)=0;
+	virtual void immediate_clear(RID p_immediate)=0;
+	virtual void immediate_set_material(RID p_immediate,RID p_material)=0;
+	virtual RID immediate_get_material(RID p_immediate) const=0;
+
+
 	/* PARTICLES API */
 		
 	virtual RID particles_create()=0;
@@ -441,9 +459,7 @@ public:
 		LIGHT_SPOT
 	};
 
-	enum LightColor {
-		
-		LIGHT_COLOR_AMBIENT,
+	enum LightColor {		
 		LIGHT_COLOR_DIFFUSE,
 		LIGHT_COLOR_SPECULAR
 	};
@@ -458,6 +474,8 @@ public:
 		LIGHT_PARAM_SHADOW_DARKENING,
 		LIGHT_PARAM_SHADOW_Z_OFFSET,
 		LIGHT_PARAM_SHADOW_Z_SLOPE_SCALE,
+		LIGHT_PARAM_SHADOW_ESM_MULTIPLIER,
+		LIGHT_PARAM_SHADOW_BLUR_PASSES,
 		LIGHT_PARAM_MAX
 	};
 
@@ -502,7 +520,8 @@ public:
 	enum LightDirectionalShadowMode {
 		LIGHT_DIRECTIONAL_SHADOW_ORTHOGONAL,
 		LIGHT_DIRECTIONAL_SHADOW_PERSPECTIVE,
-		LIGHT_DIRECTIONAL_SHADOW_PARALLEL_SPLIT
+		LIGHT_DIRECTIONAL_SHADOW_PARALLEL_2_SPLITS,
+		LIGHT_DIRECTIONAL_SHADOW_PARALLEL_4_SPLITS
 	};
 
 	virtual void light_directional_set_shadow_mode(RID p_light,LightDirectionalShadowMode p_mode)=0;
@@ -551,6 +570,25 @@ public:
 	virtual void portal_set_connect_range(RID p_portal, float p_range) =0;
 	virtual float portal_get_connect_range(RID p_portal) const =0;
 
+
+	/* BAKED LIGHT API */
+
+	virtual RID baked_light_create()=0;
+	enum BakedLightMode {
+		BAKED_LIGHT_OCTREE,
+		BAKED_LIGHT_LIGHTMAPS
+	};
+
+	virtual void baked_light_set_mode(RID p_baked_light,BakedLightMode p_mode)=0;
+	virtual BakedLightMode baked_light_get_mode(RID p_baked_light) const=0;
+
+	virtual void baked_light_set_octree(RID p_baked_light,const DVector<uint8_t> p_octree)=0;
+	virtual DVector<uint8_t> baked_light_get_octree(RID p_baked_light) const=0;
+
+	virtual void baked_light_add_lightmap(RID p_baked_light,const RID p_texture,int p_id)=0;
+	virtual void baked_light_clear_lightmaps(RID p_baked_light)=0;
+
+
 	/* CAMERA API */
 	
 	virtual RID camera_create()=0;
@@ -592,6 +630,7 @@ public:
 
 	virtual void viewport_attach_to_screen(RID p_viewport,int p_screen=0)=0;
 	virtual void viewport_detach(RID p_viewport)=0;
+	virtual void viewport_set_render_target_to_screen_rect(RID p_viewport,const Rect2& p_rect)=0;
 
 	enum RenderTargetUpdateMode {
 		RENDER_TARGET_UPDATE_DISABLED,
@@ -600,13 +639,18 @@ public:
 		RENDER_TARGET_UPDATE_ALWAYS
 	};
 
+
 	virtual void viewport_set_as_render_target(RID p_viewport,bool p_enable)=0;
 	virtual void viewport_set_render_target_update_mode(RID p_viewport,RenderTargetUpdateMode p_mode)=0;
 	virtual RenderTargetUpdateMode viewport_get_render_target_update_mode(RID p_viewport) const=0;
 	virtual RID viewport_get_render_target_texture(RID p_viewport) const=0;
+	virtual void viewport_set_render_target_vflip(RID p_viewport,bool p_enable)=0;
+	virtual bool viewport_get_render_target_vflip(RID p_viewport) const=0;
 
 	virtual void viewport_queue_screen_capture(RID p_viewport)=0;
 	virtual Image viewport_get_screen_capture(RID p_viewport) const=0;
+
+
 
 	struct ViewportRect {
 	
@@ -664,6 +708,7 @@ public:
 		ENV_BG_PARAM_CUBEMAP,
 		ENV_BG_PARAM_ENERGY,
 		ENV_BG_PARAM_SCALE,
+		ENV_BG_PARAM_GLOW,
 		ENV_BG_PARAM_MAX
 	};
 
@@ -672,12 +717,14 @@ public:
 	virtual Variant environment_get_background_param(RID p_env,EnvironmentBGParam p_param) const=0;
 
 	enum EnvironmentFx {
+		ENV_FX_AMBIENT_LIGHT,
+		ENV_FX_FXAA,
 		ENV_FX_GLOW,
 		ENV_FX_DOF_BLUR,
 		ENV_FX_HDR,
 		ENV_FX_FOG,
 		ENV_FX_BCS,
-		ENV_FX_GAMMA,
+		ENV_FX_SRGB,
 		ENV_FX_MAX
 	};
 
@@ -686,15 +733,34 @@ public:
 	virtual void environment_set_enable_fx(RID p_env,EnvironmentFx p_effect,bool p_enabled)=0;
 	virtual bool environment_is_fx_enabled(RID p_env,EnvironmentFx p_mode) const=0;
 
+	enum EnvironmentFxBlurBlendMode {
+		ENV_FX_BLUR_BLEND_MODE_ADDITIVE,
+		ENV_FX_BLUR_BLEND_MODE_SCREEN,
+		ENV_FX_BLUR_BLEND_MODE_SOFTLIGHT,
+	};
+
+	enum EnvironmentFxHDRToneMapper {
+		ENV_FX_HDR_TONE_MAPPER_LINEAR,
+		ENV_FX_HDR_TONE_MAPPER_LOG,
+		ENV_FX_HDR_TONE_MAPPER_REINHARDT,
+		ENV_FX_HDR_TONE_MAPPER_REINHARDT_AUTOWHITE,
+	};
+
 	enum EnvironmentFxParam {
+		ENV_FX_PARAM_AMBIENT_LIGHT_COLOR,
+		ENV_FX_PARAM_AMBIENT_LIGHT_ENERGY,
 		ENV_FX_PARAM_GLOW_BLUR_PASSES,
+		ENV_FX_PARAM_GLOW_BLUR_SCALE,
+		ENV_FX_PARAM_GLOW_BLUR_STRENGTH,
+		ENV_FX_PARAM_GLOW_BLUR_BLEND_MODE,
 		ENV_FX_PARAM_GLOW_BLOOM,
 		ENV_FX_PARAM_GLOW_BLOOM_TRESHOLD,
 		ENV_FX_PARAM_DOF_BLUR_PASSES,
 		ENV_FX_PARAM_DOF_BLUR_BEGIN,
 		ENV_FX_PARAM_DOF_BLUR_RANGE,
+		ENV_FX_PARAM_HDR_TONEMAPPER,
 		ENV_FX_PARAM_HDR_EXPOSURE,
-		ENV_FX_PARAM_HDR_SCALAR,
+		ENV_FX_PARAM_HDR_WHITE,
 		ENV_FX_PARAM_HDR_GLOW_TRESHOLD,
 		ENV_FX_PARAM_HDR_GLOW_SCALE,
 		ENV_FX_PARAM_HDR_MIN_LUMINANCE,
@@ -708,7 +774,6 @@ public:
 		ENV_FX_PARAM_BCS_BRIGHTNESS,
 		ENV_FX_PARAM_BCS_CONTRAST,
 		ENV_FX_PARAM_BCS_SATURATION,
-		ENV_FX_PARAM_GAMMA,
 		ENV_FX_PARAM_MAX
 	};
 
@@ -744,12 +809,14 @@ public:
 		INSTANCE_NONE,
 		INSTANCE_MESH,
 		INSTANCE_MULTIMESH,
+		INSTANCE_IMMEDIATE,
 		INSTANCE_PARTICLES,
 		INSTANCE_LIGHT,
 		INSTANCE_ROOM,
 		INSTANCE_PORTAL,
+		INSTANCE_BAKED_LIGHT,
 		
-		INSTANCE_GEOMETRY_MASK=(1<<INSTANCE_MESH)|(1<<INSTANCE_MULTIMESH)|(1<<INSTANCE_PARTICLES)
+		INSTANCE_GEOMETRY_MASK=(1<<INSTANCE_MESH)|(1<<INSTANCE_MULTIMESH)|(1<<INSTANCE_IMMEDIATE)|(1<<INSTANCE_PARTICLES)
 	};
 	
 
@@ -805,6 +872,7 @@ public:
 		INSTANCE_FLAG_RECEIVE_SHADOWS,
 		INSTANCE_FLAG_DEPH_SCALE,
 		INSTANCE_FLAG_VISIBLE_IN_ALL_ROOMS,
+		INSTANCE_FLAG_USE_BAKED_LIGHT,
 		INSTANCE_FLAG_MAX
 	};
 
@@ -818,6 +886,14 @@ public:
 	virtual float instance_geometry_get_draw_range_max(RID p_instance) const=0;
 	virtual float instance_geometry_get_draw_range_min(RID p_instance) const=0;
 
+	virtual void instance_geometry_set_baked_light(RID p_instance,RID p_baked_light)=0;
+	virtual RID instance_geometry_get_baked_light(RID p_instance) const=0;
+
+	virtual void instance_geometry_set_baked_light_texture_index(RID p_instance,int p_tex_id)=0;
+	virtual int instance_geometry_get_baked_light_texture_index(RID p_instance) const=0;
+
+	virtual void instance_light_set_enabled(RID p_instance,bool p_enabled)=0;
+	virtual bool instance_light_is_enabled(RID p_instance) const=0;
 
 	/* CANVAS (2D) */
 
@@ -878,6 +954,7 @@ public:
 
 
 	virtual void black_bars_set_margins(int p_left, int p_top, int p_right, int p_bottom)=0;
+	virtual void black_bars_set_images(RID p_left, RID p_top, RID p_right, RID p_bottom)=0;
 
 
 	/* FREE */
@@ -918,6 +995,12 @@ public:
 	};
 
 	virtual int get_render_info(RenderInfo p_info)=0;
+
+
+	/* Materials for 2D on 3D */
+
+
+	RID material_2d_get(bool p_shaded, bool p_transparent, bool p_cut_alpha,bool p_opaque_prepass);
 	
 
 	/* TESTING */
@@ -925,6 +1008,7 @@ public:
 	virtual RID get_test_cube()=0;
 
 	virtual RID get_test_texture();
+	virtual RID get_white_texture();
 
 	virtual RID make_sphere_mesh(int p_lats,int p_lons,float p_radius);
 

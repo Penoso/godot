@@ -132,10 +132,12 @@ class RasterizerGLES1 : public Rasterizer {
 
 		String vertex_code;
 		String fragment_code;
+		String light_code;
 		VS::ShaderMode mode;
 		Map<StringName,Variant> params;
 		int fragment_line;
 		int vertex_line;
+		int light_line;
 		bool valid;
 		bool has_alpha;
 		bool use_world_transform;
@@ -149,15 +151,14 @@ class RasterizerGLES1 : public Rasterizer {
 
 		bool fixed_flags[VS::FIXED_MATERIAL_FLAG_MAX];
 		bool flags[VS::MATERIAL_FLAG_MAX];
-		bool hints[VS::MATERIAL_HINT_MAX];
 		Variant parameters[VisualServer::FIXED_MATERIAL_PARAM_MAX];
 		RID textures[VisualServer::FIXED_MATERIAL_PARAM_MAX];
 
-		VS::MaterialShadeModel shade_model;
+		VS::MaterialDepthDrawMode depth_draw_mode;
+
 		Transform uv_transform;
 		VS::FixedMaterialTexCoordMode texcoord_mode[VisualServer::FIXED_MATERIAL_PARAM_MAX];
 
-		VS::MaterialBlendMode detail_blend_mode;
 		VS::MaterialBlendMode blend_mode;
 
 		float line_width;
@@ -179,8 +180,6 @@ class RasterizerGLES1 : public Rasterizer {
 			for(int i=0;i<VS::MATERIAL_FLAG_MAX;i++)
 				flags[i]=false;
 			flags[VS::MATERIAL_FLAG_VISIBLE]=true;
-			for(int i=0;i<VS::MATERIAL_HINT_MAX;i++)
-				hints[i]=false;
 
 			parameters[VS::FIXED_MATERIAL_PARAM_DIFFUSE] = Color(0.8, 0.8, 0.8);
 			parameters[VS::FIXED_MATERIAL_PARAM_SPECULAR_EXP] = 12;
@@ -188,7 +187,7 @@ class RasterizerGLES1 : public Rasterizer {
 			for (int i=0; i<VisualServer::FIXED_MATERIAL_PARAM_MAX; i++) {
 				texcoord_mode[i] = VS::FIXED_MATERIAL_TEXCOORD_UV;
 			};
-			detail_blend_mode = VS::MATERIAL_BLEND_MODE_MIX;
+			depth_draw_mode=VS::MATERIAL_DEPTH_DRAW_OPAQUE_ONLY;
 			line_width=1;
 			has_alpha=false;
 			blend_mode=VS::MATERIAL_BLEND_MODE_MIX;
@@ -323,6 +322,7 @@ class RasterizerGLES1 : public Rasterizer {
 		Vector<Surface*> surfaces;
 		int morph_target_count;
 		VS::MorphTargetMode morph_target_mode;
+		AABB custom_aabb;
 
 		mutable uint64_t last_pass;
 		Mesh() {
@@ -369,6 +369,15 @@ class RasterizerGLES1 : public Rasterizer {
 	};
 
 	mutable RID_Owner<MultiMesh> multimesh_owner;
+
+
+	struct Immediate {
+
+		RID material;
+		int empty;
+	};
+
+	mutable RID_Owner<Immediate> immediate_owner;
 
 	struct Particles : public Geometry {
 
@@ -423,7 +432,7 @@ class RasterizerGLES1 : public Rasterizer {
 			vars[VS::LIGHT_PARAM_ENERGY]=1.0;
 			vars[VS::LIGHT_PARAM_RADIUS]=1.0;
 			vars[VS::LIGHT_PARAM_SHADOW_Z_OFFSET]=0.05;
-			colors[VS::LIGHT_COLOR_AMBIENT]=Color(0,0,0);
+
 			colors[VS::LIGHT_COLOR_DIFFUSE]=Color(1,1,1);
 			colors[VS::LIGHT_COLOR_SPECULAR]=Color(1,1,1);
 			shadow_enabled=false;
@@ -458,7 +467,7 @@ class RasterizerGLES1 : public Rasterizer {
 			fx_param[VS::ENV_FX_PARAM_DOF_BLUR_BEGIN]=100.0;
 			fx_param[VS::ENV_FX_PARAM_DOF_BLUR_RANGE]=10.0;
 			fx_param[VS::ENV_FX_PARAM_HDR_EXPOSURE]=0.4;
-			fx_param[VS::ENV_FX_PARAM_HDR_SCALAR]=1.0;
+			fx_param[VS::ENV_FX_PARAM_HDR_WHITE]=1.0;
 			fx_param[VS::ENV_FX_PARAM_HDR_GLOW_TRESHOLD]=0.95;
 			fx_param[VS::ENV_FX_PARAM_HDR_GLOW_SCALE]=0.2;
 			fx_param[VS::ENV_FX_PARAM_HDR_MIN_LUMINANCE]=0.4;
@@ -472,7 +481,6 @@ class RasterizerGLES1 : public Rasterizer {
 			fx_param[VS::ENV_FX_PARAM_BCS_BRIGHTNESS]=1.0;
 			fx_param[VS::ENV_FX_PARAM_BCS_CONTRAST]=1.0;
 			fx_param[VS::ENV_FX_PARAM_BCS_SATURATION]=1.0;
-			fx_param[VS::ENV_FX_PARAM_GAMMA]=1.0;
 
 		}
 
@@ -853,9 +861,10 @@ public:
 	virtual void shader_set_mode(RID p_shader,VS::ShaderMode p_mode);
 	virtual VS::ShaderMode shader_get_mode(RID p_shader) const;
 
-	virtual void shader_set_code(RID p_shader, const String& p_vertex, const String& p_fragment,int p_vertex_ofs=0,int p_fragment_ofs=0);
+	virtual void shader_set_code(RID p_shader, const String& p_vertex, const String& p_fragment,const String& p_light,int p_vertex_ofs=0,int p_fragment_ofs=0,int p_light_ofs=0);
 	virtual String shader_get_fragment_code(RID p_shader) const;
 	virtual String shader_get_vertex_code(RID p_shader) const;
+	virtual String shader_get_light_code(RID p_shader) const;
 
 	virtual void shader_get_param_list(RID p_shader, List<PropertyInfo> *p_param_list) const;
 
@@ -872,11 +881,8 @@ public:
 	virtual void material_set_flag(RID p_material, VS::MaterialFlag p_flag,bool p_enabled);
 	virtual bool material_get_flag(RID p_material,VS::MaterialFlag p_flag) const;
 
-	virtual void material_set_hint(RID p_material, VS::MaterialHint p_hint,bool p_enabled);
-	virtual bool material_get_hint(RID p_material,VS::MaterialHint p_hint) const;
-
-	virtual void material_set_shade_model(RID p_material, VS::MaterialShadeModel p_model);
-	virtual VS::MaterialShadeModel material_get_shade_model(RID p_material) const;
+	virtual void material_set_depth_draw_mode(RID p_material, VS::MaterialDepthDrawMode p_mode);
+	virtual VS::MaterialDepthDrawMode material_get_depth_draw_mode(RID p_material) const;
 
 	virtual void material_set_blend_mode(RID p_material,VS::MaterialBlendMode p_mode);
 	virtual VS::MaterialBlendMode material_get_blend_mode(RID p_material) const;
@@ -896,9 +902,6 @@ public:
 
 	virtual void fixed_material_set_texture(RID p_material,VS::FixedMaterialParam p_parameter, RID p_texture);
 	virtual RID fixed_material_get_texture(RID p_material,VS::FixedMaterialParam p_parameter) const;
-
-	virtual void fixed_material_set_detail_blend_mode(RID p_material,VS::MaterialBlendMode p_mode);
-	virtual VS::MaterialBlendMode fixed_material_get_detail_blend_mode(RID p_material) const;
 
 	virtual void fixed_material_set_texcoord_mode(RID p_material,VS::FixedMaterialParam p_parameter, VS::FixedMaterialTexCoordMode p_mode);
 	virtual VS::FixedMaterialTexCoordMode fixed_material_get_texcoord_mode(RID p_material,VS::FixedMaterialParam p_parameter) const;
@@ -938,6 +941,9 @@ public:
 
 	virtual AABB mesh_get_aabb(RID p_mesh) const;
 
+	virtual void mesh_set_custom_aabb(RID p_mesh,const AABB& p_aabb);
+	virtual AABB mesh_get_custom_aabb(RID p_mesh) const;
+
 	/* MULTIMESH API */
 
 	virtual RID multimesh_create();
@@ -958,6 +964,23 @@ public:
 
 	virtual void multimesh_set_visible_instances(RID p_multimesh,int p_visible);
 	virtual int multimesh_get_visible_instances(RID p_multimesh) const;
+
+	/* IMMEDIATE API */
+
+	virtual RID immediate_create();
+	virtual void immediate_begin(RID p_immediate,VS::PrimitiveType p_rimitive,RID p_texture=RID());
+	virtual void immediate_vertex(RID p_immediate,const Vector3& p_vertex);
+	virtual void immediate_normal(RID p_immediate,const Vector3& p_normal);
+	virtual void immediate_tangent(RID p_immediate,const Plane& p_tangent);
+	virtual void immediate_color(RID p_immediate,const Color& p_color);
+	virtual void immediate_uv(RID p_immediate,const Vector2& tex_uv);
+	virtual void immediate_uv2(RID p_immediate,const Vector2& tex_uv);
+	virtual void immediate_end(RID p_immediate);
+	virtual void immediate_clear(RID p_immediate);
+	virtual AABB immediate_get_aabb(RID p_immediate) const;
+	virtual void immediate_set_material(RID p_immediate,RID p_material);
+	virtual RID immediate_get_material(RID p_immediate) const;
+
 
 	/* PARTICLES API */
 
@@ -1070,6 +1093,7 @@ public:
 	virtual bool light_instance_assign_shadow(RID p_light_instance);
 	virtual ShadowType light_instance_get_shadow_type(RID p_light_instance) const;
 	virtual int light_instance_get_shadow_passes(RID p_light_instance) const;
+	virtual bool light_instance_get_pssm_shadow_overlap(RID p_light_instance) const;
 	virtual void light_instance_set_custom_transform(RID p_light_instance, int p_index, const CameraMatrix& p_camera, const Transform& p_transform, float p_split_near=0,float p_split_far=0);
 	virtual int light_instance_get_shadow_size(RID p_light_instance, int p_index=0) const { return 1; }
 
@@ -1101,7 +1125,7 @@ public:
 	virtual void begin_frame();
 
 	virtual void set_viewport(const VS::ViewportRect& p_viewport);
-	virtual void set_render_target(RID p_render_target);
+	virtual void set_render_target(RID p_render_target,bool p_transparent_bg=false,bool p_vflip=false);
 	virtual void clear_viewport(const Color& p_color);
 	virtual void capture_viewport(Image* r_capture);
 
@@ -1116,6 +1140,7 @@ public:
 
 	virtual void add_mesh( const RID& p_mesh, const InstanceData *p_data);
 	virtual void add_multimesh( const RID& p_multimesh, const InstanceData *p_data);
+	virtual void add_immediate( const RID& p_immediate, const InstanceData *p_data) {}
 	virtual void add_particles( const RID& p_particle_instance, const InstanceData *p_data);
 
 	virtual void end_scene();
@@ -1126,6 +1151,7 @@ public:
 	/* CANVAS API */
 
 	virtual void canvas_begin();
+	virtual void canvas_disable_blending();
 	virtual void canvas_set_opacity(float p_opacity);
 	virtual void canvas_set_blend_mode(VS::MaterialBlendMode p_mode);
 	virtual void canvas_begin_rect(const Matrix32& p_transform);
@@ -1171,6 +1197,7 @@ public:
 	virtual bool is_material(const RID& p_rid) const;
 	virtual bool is_mesh(const RID& p_rid) const;
 	virtual bool is_multimesh(const RID& p_rid) const;
+	virtual bool is_immediate(const RID& p_rid) const;
 	virtual bool is_particles(const RID &p_beam) const;
 
 	virtual bool is_light(const RID& p_rid) const;

@@ -1512,6 +1512,10 @@ void RichTextLabel::_bind_methods() {
 	ObjectTypeDB::bind_method(_MD("set_selection_enabled","enabled"),&RichTextLabel::set_selection_enabled);
 	ObjectTypeDB::bind_method(_MD("is_selection_enabled"),&RichTextLabel::is_selection_enabled);
 
+	ObjectTypeDB::bind_method(_MD("parse_bbcode", "bbcode"),&RichTextLabel::parse_bbcode);
+	ObjectTypeDB::bind_method(_MD("append_bbcode", "bbcode"),&RichTextLabel::append_bbcode);
+
+
 	ADD_SIGNAL( MethodInfo("meta_clicked",PropertyInfo(Variant::NIL,"meta")));
 
 	BIND_CONSTANT( ALIGN_LEFT );
@@ -1557,8 +1561,9 @@ RichTextLabel::RichTextLabel() {
 	scroll_active=true;
 	scroll_w=0;
 
-	vscroll = memnew( VScrollBar );
+	vscroll = memnew( VScrollBar );	
 	add_child(vscroll);
+	vscroll->set_drag_slave(String(".."));
 	vscroll->set_step(1);
 	vscroll->set_anchor_and_margin( MARGIN_TOP, ANCHOR_BEGIN, 0);
 	vscroll->set_anchor_and_margin( MARGIN_BOTTOM, ANCHOR_END, 0);

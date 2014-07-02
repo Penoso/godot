@@ -33,6 +33,7 @@
 #include "scene/scene_string_names.h"
 #include "scene/resources/packed_scene.h"
 #include "io/resource_loader.h"
+#include "viewport.h"
 
 VARIANT_ENUM_CAST(Node::PauseMode);
 
@@ -76,12 +77,25 @@ void Node::_notification(int p_notification) {
 				data.pause_owner=this;
 			}
 
+			if (data.input)
+				add_to_group("_vp_input"+itos(get_viewport()->get_instance_ID()));
+			if (data.unhandled_input)
+				add_to_group("_vp_unhandled_input"+itos(get_viewport()->get_instance_ID()));
+			if (data.unhandled_key_input)
+				add_to_group("_vp_unhandled_key_input"+itos(get_viewport()->get_instance_ID()));
+
 			get_scene()->node_count++;
 
 		} break;
 		case NOTIFICATION_EXIT_SCENE: {
 
 			get_scene()->node_count--;
+			if (data.input)
+				remove_from_group("_vp_input"+itos(get_viewport()->get_instance_ID()));
+			if (data.unhandled_input)
+				remove_from_group("_vp_unhandled_input"+itos(get_viewport()->get_instance_ID()));
+			if (data.unhandled_key_input)
+				remove_from_group("_vp_unhandled_key_input"+itos(get_viewport()->get_instance_ID()));
 
 		} break;
 		case NOTIFICATION_READY: {
@@ -148,6 +162,9 @@ void Node::_propagate_enter_scene() {
 		data.depth=1;
 	}
 	
+	data.viewport = cast_to<Viewport>();
+	if (!data.viewport)
+		data.viewport = data.parent->data.viewport;
 
 	data.inside_scene=true;
 
@@ -157,6 +174,7 @@ void Node::_propagate_enter_scene() {
 
 		data.scene->add_to_group(*K,this);
 	}
+
 
 	notification(NOTIFICATION_ENTER_SCENE);
 
@@ -215,6 +233,8 @@ void Node::_propagate_exit_scene() {
 
 		data.scene->remove_from_group(*K,this);
 	}
+
+	data.viewport = NULL;
 
 	if (data.scene)
 		data.scene->tree_changed();
@@ -324,7 +344,7 @@ void Node::set_pause_mode(PauseMode p_mode) {
 	if (data.pause_mode==PAUSE_MODE_INHERIT) {
 
 		if (data.parent)
-			data.parent->data.pause_owner;
+			owner=data.parent->data.pause_owner;
 	} else {
 		owner=this;
 	}
@@ -421,11 +441,17 @@ void Node::set_process_input(bool p_enable) {
 
 	if (p_enable==data.input)
 		return;
+
 	data.input=p_enable;
+	if (!is_inside_scene())
+		return;
+
 	if (p_enable)
-		add_to_group("input");
+		add_to_group("_vp_input"+itos(get_viewport()->get_instance_ID()));
 	else
-		remove_from_group("input");
+		remove_from_group("_vp_input"+itos(get_viewport()->get_instance_ID()));
+
+
 }
 
 bool Node::is_processing_input() const {
@@ -437,15 +463,38 @@ void Node::set_process_unhandled_input(bool p_enable) {
 	if (p_enable==data.unhandled_input)
 		return;
 	data.unhandled_input=p_enable;
+	if (!is_inside_scene())
+		return;
 
 	if (p_enable)
-		add_to_group("unhandled_input");
+		add_to_group("_vp_unhandled_input"+itos(get_viewport()->get_instance_ID()));
 	else
-		remove_from_group("unhandled_input");
+		remove_from_group("_vp_unhandled_input"+itos(get_viewport()->get_instance_ID()));
 }
+
 
 bool Node::is_processing_unhandled_input() const {
 	return data.unhandled_input;
+}
+
+
+void Node::set_process_unhandled_key_input(bool p_enable) {
+
+	if (p_enable==data.unhandled_key_input)
+		return;
+	data.unhandled_key_input=p_enable;
+	if (!is_inside_scene())
+		return;
+
+	if (p_enable)
+		add_to_group("_vp_unhandled_key_input"+itos(get_viewport()->get_instance_ID()));
+	else
+		remove_from_group("_vp_unhandled_key_input"+itos(get_viewport()->get_instance_ID()));
+}
+
+
+bool Node::is_processing_unhandled_key_input() const {
+	return data.unhandled_key_input;
 }
 
 
@@ -1027,6 +1076,18 @@ void Node::remove_from_group(const StringName& p_identifier) {
 
 	data.grouped.erase(p_identifier);	
 
+}
+
+Array Node::_get_groups() const {
+
+	Array groups;
+	List<GroupInfo> gi;
+	get_groups(&gi);
+	for (List<GroupInfo>::Element *E=gi.front();E;E=E->next()) {
+		groups.push_back(E->get().name);
+	}
+
+	return groups;
 }
 
 void Node::get_groups(List<GroupInfo> *p_groups) const {
@@ -1637,6 +1698,20 @@ Array Node::_get_children() const {
 	return arr;
 }
 
+#ifdef TOOLS_ENABLED
+void Node::set_import_path(const NodePath& p_import_path) {
+
+
+	data.import_path=p_import_path;
+}
+
+NodePath Node::get_import_path() const {
+
+	return data.import_path;
+}
+
+#endif
+
 
 void Node::_bind_methods() {
 
@@ -1663,6 +1738,7 @@ void Node::_bind_methods() {
 	ObjectTypeDB::bind_method(_MD("remove_from_group","group"),&Node::remove_from_group);
 	ObjectTypeDB::bind_method(_MD("is_in_group","group"),&Node::is_in_group);
 	ObjectTypeDB::bind_method(_MD("move_child","child_node:Node","to_pos"),&Node::move_child);
+	ObjectTypeDB::bind_method(_MD("get_groups"),&Node::_get_groups);
 	ObjectTypeDB::bind_method(_MD("raise"),&Node::raise);
 	ObjectTypeDB::bind_method(_MD("set_owner","owner:Node"),&Node::set_owner);
 	ObjectTypeDB::bind_method(_MD("get_owner:Node"),&Node::get_owner);
@@ -1682,6 +1758,8 @@ void Node::_bind_methods() {
 	ObjectTypeDB::bind_method(_MD("is_processing_input"),&Node::is_processing_input);
 	ObjectTypeDB::bind_method(_MD("set_process_unhandled_input","enable"),&Node::set_process_unhandled_input);
 	ObjectTypeDB::bind_method(_MD("is_processing_unhandled_input"),&Node::is_processing_unhandled_input);
+	ObjectTypeDB::bind_method(_MD("set_process_unhandled_key_input","enable"),&Node::set_process_unhandled_key_input);
+	ObjectTypeDB::bind_method(_MD("is_processing_unhandled_key_input"),&Node::is_processing_unhandled_key_input);
 	ObjectTypeDB::bind_method(_MD("set_pause_mode","mode"),&Node::set_pause_mode);
 	ObjectTypeDB::bind_method(_MD("get_pause_mode"),&Node::get_pause_mode);
 	ObjectTypeDB::bind_method(_MD("can_process"),&Node::can_process);
@@ -1693,7 +1771,15 @@ void Node::_bind_methods() {
 	ObjectTypeDB::bind_method(_MD("duplicate:Node"),&Node::duplicate);
 	ObjectTypeDB::bind_method(_MD("replace_by","node:Node","keep_data"),&Node::replace_by,DEFVAL(false));
 
+	ObjectTypeDB::bind_method(_MD("get_viewport"),&Node::get_viewport);
+
 	ObjectTypeDB::bind_method(_MD("queue_free"),&Node::queue_delete);
+#ifdef TOOLS_ENABLED
+	ObjectTypeDB::bind_method(_MD("_set_import_path","import_path"),&Node::set_import_path);
+	ObjectTypeDB::bind_method(_MD("_get_import_path"),&Node::get_import_path);
+	ADD_PROPERTY( PropertyInfo(Variant::NODE_PATH,"_import_path",PROPERTY_HINT_NONE,"",PROPERTY_USAGE_NOEDITOR),_SCS("_set_import_path"),_SCS("_get_import_path"));
+
+#endif
 
 	BIND_CONSTANT( NOTIFICATION_ENTER_SCENE );
 	BIND_CONSTANT( NOTIFICATION_EXIT_SCENE );
@@ -1748,13 +1834,15 @@ Node::Node() {
 	data.inside_scene=false;
 
 	data.owner=NULL;
-	data.OW=false;
+	data.OW=NULL;
 	data.input=false;
 	data.unhandled_input=false;
+	data.unhandled_key_input=false;
 	data.pause_mode=PAUSE_MODE_INHERIT;
 	data.pause_owner=NULL;
 	data.parent_owned=false;
 	data.in_constructor=true;
+	data.viewport=NULL;
 }
 
 Node::~Node() {

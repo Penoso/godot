@@ -4,6 +4,7 @@
 #include "io/marshalls.h"
 #include "io/base64.h"
 #include "core/globals.h"
+#include "io/file_access_encrypted.h"
 
 _ResourceLoader *_ResourceLoader::singleton=NULL;
 
@@ -97,6 +98,13 @@ void _ResourceSaver::_bind_methods() {
 
 	ObjectTypeDB::bind_method(_MD("save","path","resource:Resource"),&_ResourceSaver::save, DEFVAL(0));
 	ObjectTypeDB::bind_method(_MD("get_recognized_extensions","type"),&_ResourceSaver::get_recognized_extensions);
+
+	BIND_CONSTANT(FLAG_RELATIVE_PATHS);
+	BIND_CONSTANT(FLAG_BUNDLE_RESOURCES);
+	BIND_CONSTANT(FLAG_CHANGE_PATH);
+	BIND_CONSTANT(FLAG_OMIT_EDITOR_PROPERTIES);
+	BIND_CONSTANT(FLAG_SAVE_BIG_ENDIAN);
+	BIND_CONSTANT(FLAG_COMPRESS);
 }
 
 _ResourceSaver::_ResourceSaver() {
@@ -227,7 +235,7 @@ Error _OS::shell_open(String p_uri) {
 };
 
 
-int _OS::execute(const String& p_path, const Vector<String> & p_arguments,bool p_blocking) {
+int _OS::execute(const String& p_path, const Vector<String> & p_arguments, bool p_blocking, Array p_output) {
 
 	OS::ProcessID pid;
 	List<String> args;
@@ -235,6 +243,8 @@ int _OS::execute(const String& p_path, const Vector<String> & p_arguments,bool p
 		args.push_back(p_arguments[i]);
 	String pipe;
 	Error err = OS::get_singleton()->execute(p_path,args,p_blocking,&pid, &pipe);
+	p_output.clear();
+	p_output.push_back(pipe);
 	if (err != OK)
 		return -1;
 	else
@@ -478,10 +488,54 @@ void _OS::print_all_textures_by_size() {
 		print_line(E->get().path+" - "+String::humanize_size(E->get().vram)+"  ("+E->get().size+") - total:"+String::humanize_size(total) );
 		total-=E->get().vram;
 	}
-
-
-
 }
+
+void _OS::print_resources_by_type(const Vector<String>& p_types) {
+
+	Map<String,int> type_count;
+
+	List<Ref<Resource> > resources;
+	ResourceCache::get_cached_resources(&resources);
+
+	List<Ref<Resource> > rsrc;
+	ResourceCache::get_cached_resources(&rsrc);
+
+	for (List<Ref<Resource> >::Element *E=rsrc.front();E;E=E->next()) {
+
+		Ref<Resource> r = E->get();
+
+		bool found = false;
+
+		for (int i=0; i<p_types.size(); i++) {
+			if (r->is_type(p_types[i]))
+				found = true;
+		}
+		if (!found)
+			continue;
+
+		if (!type_count.has(r->get_type())) {
+			type_count[r->get_type()]=0;
+		}
+
+
+		type_count[r->get_type()]++;
+
+		print_line(r->get_type()+": "+r->get_path());
+
+		List<String> metas;
+		r->get_meta_list(&metas);
+		for (List<String>::Element* me = metas.front(); me; me = me->next()) {
+			print_line(" "+String(me->get()) + ": " + r->get_meta(me->get()));
+		};
+	}
+
+	for(Map<String,int>::Element *E=type_count.front();E;E=E->next()) {
+
+		print_line(E->key()+" count: "+itos(E->get()));
+	}
+
+};
+
 
 void _OS::print_all_resources(const String& p_to_file ) {
 
@@ -508,9 +562,9 @@ float _OS::get_frames_per_second() const {
 	return OS::get_singleton()->get_frames_per_second();
 }
 
-Error _OS::native_video_play(String p_path) {
+Error _OS::native_video_play(String p_path, float p_volume) {
 
-	return OS::get_singleton()->native_video_play(p_path);
+	return OS::get_singleton()->native_video_play(p_path, p_volume);
 };
 
 bool _OS::native_video_is_playing() {
@@ -564,7 +618,7 @@ void _OS::_bind_methods() {
 	ObjectTypeDB::bind_method(_MD("get_processor_count"),&_OS::get_processor_count);
 
 	ObjectTypeDB::bind_method(_MD("get_executable_path"),&_OS::get_executable_path);
-	ObjectTypeDB::bind_method(_MD("execute","path","arguments","blocking"),&_OS::execute);
+	ObjectTypeDB::bind_method(_MD("execute","path","arguments","blocking","output"),&_OS::execute,DEFVAL(Array()));
 	ObjectTypeDB::bind_method(_MD("kill","pid"),&_OS::kill);
 	ObjectTypeDB::bind_method(_MD("shell_open","uri"),&_OS::shell_open);
 	ObjectTypeDB::bind_method(_MD("get_process_ID"),&_OS::get_process_ID);
@@ -613,6 +667,7 @@ void _OS::_bind_methods() {
 	ObjectTypeDB::bind_method(_MD("get_frames_per_second"),&_OS::get_frames_per_second);
 
 	ObjectTypeDB::bind_method(_MD("print_all_textures_by_size"),&_OS::print_all_textures_by_size);
+	ObjectTypeDB::bind_method(_MD("print_resources_by_type"),&_OS::print_resources_by_type);
 
 	ObjectTypeDB::bind_method(_MD("native_video_play"),&_OS::native_video_play);
 	ObjectTypeDB::bind_method(_MD("native_video_is_playing"),&_OS::native_video_is_playing);
@@ -810,6 +865,44 @@ _Geometry::_Geometry() {
 
 
 ///////////////////////// FILE
+
+
+
+Error _File::open_encrypted(const String& p_path, int p_mode_flags,const Vector<uint8_t>& p_key) {
+
+	Error err = open(p_path,p_mode_flags);
+	if (err)
+		return err;
+
+	FileAccessEncrypted *fae = memnew( FileAccessEncrypted );
+	err = fae->open_and_parse(f,p_key,(p_mode_flags==WRITE)?FileAccessEncrypted::MODE_WRITE_AES256:FileAccessEncrypted::MODE_READ);
+	if (err) {
+		memdelete(fae);
+		close();
+		return err;
+	}
+	f=fae;
+	return OK;
+}
+
+Error _File::open_encrypted_pass(const String& p_path, int p_mode_flags,const String& p_pass) {
+
+	Error err = open(p_path,p_mode_flags);
+	if (err)
+		return err;
+
+	FileAccessEncrypted *fae = memnew( FileAccessEncrypted );
+	err = fae->open_and_parse_password(f,p_pass,(p_mode_flags==WRITE)?FileAccessEncrypted::MODE_WRITE_AES256:FileAccessEncrypted::MODE_READ);
+	if (err) {
+		memdelete(fae);
+		close();
+		return err;
+	}
+
+	f=fae;
+	return OK;
+
+}
 
 
 Error _File::open(const String& p_path, int p_mode_flags) {
@@ -1113,6 +1206,10 @@ Variant _File::get_var() const {
 
 void _File::_bind_methods() {
 
+
+	ObjectTypeDB::bind_method(_MD("open_encrypted","path","mode_flags","key"),&_File::open_encrypted);
+	ObjectTypeDB::bind_method(_MD("open_encrypted_with_pass","path","mode_flags","pass"),&_File::open_encrypted_pass);
+
 	ObjectTypeDB::bind_method(_MD("open","path","flags"),&_File::open);
 	ObjectTypeDB::bind_method(_MD("close"),&_File::close);
 	ObjectTypeDB::bind_method(_MD("is_open"),&_File::is_open);
@@ -1252,6 +1349,10 @@ bool _Directory::file_exists(String p_file){
 	return d->file_exists(p_file);
 }
 
+bool _Directory::dir_exists(String p_dir) {
+	ERR_FAIL_COND_V(!d,false);
+	return d->dir_exists(p_dir);
+}
 
 int _Directory::get_space_left(){
 
@@ -1291,6 +1392,7 @@ void _Directory::_bind_methods() {
 	ObjectTypeDB::bind_method(_MD("make_dir:Error","name"),&_Directory::make_dir);
 	ObjectTypeDB::bind_method(_MD("make_dir_recursive:Error","name"),&_Directory::make_dir_recursive);
 	ObjectTypeDB::bind_method(_MD("file_exists","name"),&_Directory::file_exists);
+	ObjectTypeDB::bind_method(_MD("dir_exists","name"),&_Directory::dir_exists);
 //	ObjectTypeDB::bind_method(_MD("get_modified_time","file"),&_Directory::get_modified_time);
 	ObjectTypeDB::bind_method(_MD("get_space_left"),&_Directory::get_space_left);
 	ObjectTypeDB::bind_method(_MD("copy:Error","from","to"),&_Directory::copy);
@@ -1323,7 +1425,7 @@ String _Marshalls::variant_to_base64(const Variant& p_var) {
 	err = encode_variant(p_var,&w[0],len);
 	ERR_FAIL_COND_V( err != OK, "" );
 
-	int b64len = len / 3 * 4 + 4;
+	int b64len = len / 3 * 4 + 4 + 1;
 	DVector<uint8_t> b64buff;
 	b64buff.resize(b64len);
 	DVector<uint8_t>::Write w64 = b64buff.write();
@@ -1342,7 +1444,7 @@ Variant _Marshalls::base64_to_variant(const String& p_str) {
 	CharString cstr = p_str.ascii();
 
 	DVector<uint8_t> buf;
-	buf.resize(strlen / 4 * 3);
+	buf.resize(strlen / 4 * 3 + 1);
 	DVector<uint8_t>::Write w = buf.write();
 
 	int len = base64_decode((char*)(&w[0]), (char*)cstr.get_data(), strlen);

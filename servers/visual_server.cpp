@@ -145,6 +145,7 @@ RID VisualServer::_make_test_cube() {
 	tangents.push_back( normal_points[m_idx][0] );\
 	tangents.push_back( 1.0 );\
 	uvs.push_back( Vector3(uv_points[m_idx*2+0],uv_points[m_idx*2+1],0) );\
+	print_line(itos( (face_points[m_idx][0]>0?1:0)|(face_points[m_idx][1]>0?2:0)|(face_points[m_idx][2]>0?4:0)));\
 	vtx_idx++;\
 
 	for (int i=0;i<6;i++) {
@@ -272,6 +273,55 @@ RID VisualServer::make_sphere_mesh(int p_lats,int p_lons,float p_radius) {
 	mesh_add_surface(mesh,PRIMITIVE_TRIANGLES,d);
 
 	return mesh;
+}
+
+
+RID VisualServer::material_2d_get(bool p_shaded, bool p_transparent, bool p_cut_alpha, bool p_opaque_prepass) {
+
+	int version=0;
+	if (p_shaded)
+		version=1;
+	if (p_transparent)
+		version|=2;
+	if (p_cut_alpha)
+		version|=4;
+	if (p_opaque_prepass)
+		version|=8;
+	if (material_2d[version].is_valid())
+		return material_2d[version];
+
+	//not valid, make
+
+	material_2d[version]=fixed_material_create();
+	fixed_material_set_flag(material_2d[version],FIXED_MATERIAL_FLAG_USE_ALPHA,p_transparent);
+	fixed_material_set_flag(material_2d[version],FIXED_MATERIAL_FLAG_USE_COLOR_ARRAY,true);	
+	fixed_material_set_flag(material_2d[version],FIXED_MATERIAL_FLAG_DISCARD_ALPHA,p_cut_alpha);
+	material_set_flag(material_2d[version],MATERIAL_FLAG_UNSHADED,!p_shaded);
+	material_set_flag(material_2d[version],MATERIAL_FLAG_DOUBLE_SIDED,true);
+	material_set_depth_draw_mode(material_2d[version],p_opaque_prepass?MATERIAL_DEPTH_DRAW_OPAQUE_PRE_PASS_ALPHA:MATERIAL_DEPTH_DRAW_OPAQUE_ONLY);
+	fixed_material_set_texture(material_2d[version],FIXED_MATERIAL_PARAM_DIFFUSE,get_white_texture());
+	//material cut alpha?
+	return material_2d[version];
+}
+
+RID VisualServer::get_white_texture() {
+
+	if (white_texture.is_valid())
+		return white_texture;
+
+	DVector<uint8_t> wt;
+	wt.resize(16*3);
+	{
+		DVector<uint8_t>::Write w =wt.write();
+		for(int i=0;i<16*3;i++)
+			w[i]=255;
+	}
+	Image white(4,4,0,Image::FORMAT_RGB,wt);
+	white_texture=texture_create();
+	texture_allocate(white_texture,4,4,Image::FORMAT_RGB);
+	texture_set_data(white_texture,white);
+	return white_texture;
+
 }
 
 void VisualServer::_bind_methods() {
@@ -478,6 +528,7 @@ void VisualServer::_bind_methods() {
 	ObjectTypeDB::bind_method(_MD("cursor_set_pos"),&VisualServer::cursor_set_pos);
 
 	ObjectTypeDB::bind_method(_MD("black_bars_set_margins","left","top","right","bottom"),&VisualServer::black_bars_set_margins);
+	ObjectTypeDB::bind_method(_MD("black_bars_set_images","left","top","right","bottom"),&VisualServer::black_bars_set_images);
 
 	ObjectTypeDB::bind_method(_MD("make_sphere_mesh"),&VisualServer::make_sphere_mesh);
 	ObjectTypeDB::bind_method(_MD("mesh_add_surface_from_planes"),&VisualServer::mesh_add_surface_from_planes);
@@ -517,8 +568,6 @@ void VisualServer::_bind_methods() {
 	BIND_CONSTANT( MATERIAL_FLAG_INVERT_FACES );
 	BIND_CONSTANT( MATERIAL_FLAG_UNSHADED );
 	BIND_CONSTANT( MATERIAL_FLAG_ONTOP );
-	BIND_CONSTANT( MATERIAL_FLAG_WIREFRAME );
-	BIND_CONSTANT( MATERIAL_FLAG_BILLBOARD );
 	BIND_CONSTANT( MATERIAL_FLAG_MAX );
 
 	BIND_CONSTANT( MATERIAL_BLEND_MODE_MIX );
@@ -591,7 +640,7 @@ void VisualServer::_bind_methods() {
 	BIND_CONSTANT( LIGHT_OMNI );
 	BIND_CONSTANT( LIGHT_SPOT );
 
-	BIND_CONSTANT( LIGHT_COLOR_AMBIENT );
+
 	BIND_CONSTANT( LIGHT_COLOR_DIFFUSE );
 	BIND_CONSTANT( LIGHT_COLOR_SPECULAR );
 

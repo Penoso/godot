@@ -37,6 +37,7 @@
 #include "scene/main/scene_main_loop.h"
 
 
+class Viewport;
 class Node : public Object {
 
 	OBJ_TYPE( Node, Object );
@@ -81,6 +82,11 @@ private:
 		StringName name;
 		SceneMainLoop *scene;
 		bool inside_scene;
+#ifdef TOOLS_ENABLED
+		NodePath import_path; //path used when imported, used by scene editors to keep tracking
+#endif
+
+		Viewport *viewport;
 
 				
 		HashMap< StringName, GroupData,StringNameHasher>  grouped;
@@ -95,6 +101,7 @@ private:
 
 		bool input;
 		bool unhandled_input;
+		bool unhandled_key_input;
 
 		bool parent_owned;
 		bool in_constructor;
@@ -121,6 +128,7 @@ private:
 
 	void _duplicate_and_reown(Node* p_new_parent, const Map<Node*,Node*>& p_reown_map) const;
 	Array _get_children() const;
+	Array _get_groups() const;
 
 friend class SceneMainLoop;
 
@@ -237,6 +245,9 @@ public:
 	void set_process_unhandled_input(bool p_enable);
 	bool is_processing_unhandled_input() const;
 
+	void set_process_unhandled_key_input(bool p_enable);
+	bool is_processing_unhandled_key_input() const;
+
 	int get_position_in_parent() const;
 
 	Node *duplicate() const;
@@ -261,10 +272,19 @@ public:
 
 	void queue_delete();
 
+//shitty hacks for speed
 	static void set_human_readable_collision_renaming(bool p_enabled);
 	static void init_node_hrcr();
 
 	void force_parent_owned() { data.parent_owned=true; } //hack to avoid duplicate nodes
+
+#ifdef TOOLS_ENABLED
+	void set_import_path(const NodePath& p_import_path); //path used when imported, used by scene editors to keep tracking
+	NodePath get_import_path() const;
+#endif
+
+
+	_FORCE_INLINE_ Viewport *get_viewport() const { return data.viewport; }
 
 	/* CANVAS */
 

@@ -156,7 +156,7 @@ class EditorNode : public Node {
 		SETTINGS_HELP,
 		SETTINGS_ABOUT,
 		SOURCES_REIMPORT,
-		DEPENDENCY_UPDATE_LOCAL,
+		DEPENDENCY_LOAD_CHANGED_IMAGES,
 		DEPENDENCY_UPDATE_IMPORTED,
 
 		IMPORT_PLUGIN_BASE=100,
@@ -398,10 +398,15 @@ class EditorNode : public Node {
 
 	static Vector<EditorNodeInitCallback> _init_callbacks;
 
+	bool _find_scene_in_use(Node* p_node,const String& p_path) const;
+
+
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();		
 public:
+
+	static EditorNode* get_singleton() { return singleton; }
 
 
 	EditorPlugin *get_editor_plugin_screen() { return editor_plugin_screen; }
@@ -410,7 +415,6 @@ public:
 
 	static void add_editor_plugin(EditorPlugin *p_editor);
 	static void remove_editor_plugin(EditorPlugin *p_editor);
-    static EditorNode * get_singleton() { return singleton; }
 
 
 	void edit_node(Node *p_node);
@@ -419,7 +423,7 @@ public:
 	void save_resource(const Ref<Resource>& p_resource);
 	void save_resource_as(const Ref<Resource>& p_resource);
 
-
+	static bool has_unsaved_changes() { return singleton->unsaved_cache; }
 
 	static HBoxContainer *get_menu_hb() { return singleton->menu_hb; }
 
@@ -483,6 +487,10 @@ public:
 	static void progress_add_task_bg(const String& p_task,const String& p_label, int p_steps);
 	static void progress_task_step_bg(const String& p_task,int p_step=-1);
 	static void progress_end_task_bg(const String& p_task);
+
+	void save_scene(String p_file) { _save_scene(p_file); }
+
+	bool is_scene_in_use(const String& p_path);
 
 	void scan_import_changes();
 	EditorNode();	

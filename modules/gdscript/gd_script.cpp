@@ -31,6 +31,7 @@
 #include "global_constants.h"
 #include "gd_compiler.h"
 #include "os/file_access.h"
+#include "io/file_access_encrypted.h"
 
 /* TODO:
 
@@ -61,6 +62,10 @@ Variant *GDFunction::_get_variant(int p_address,GDInstance *p_instance,GDScript 
 			}
 			return &self;
 		} break;
+		case ADDR_TYPE_CLASS: {
+
+			return &p_script->_static_ref;
+		} break;
 		case ADDR_TYPE_MEMBER: {
 			//member indexing is O(1)
 			if (!p_instance) {
@@ -72,16 +77,21 @@ Variant *GDFunction::_get_variant(int p_address,GDInstance *p_instance,GDScript 
 		case ADDR_TYPE_CLASS_CONSTANT: {
 
 			//todo change to index!
-			GDScript *s=p_script;
+			GDScript *o=p_script;
 			ERR_FAIL_INDEX_V(address,_global_names_count,NULL);
 			const StringName *sn = &_global_names_ptr[address];
 
-			while(s) {
-				Map<StringName,Variant>::Element *E=s->constants.find(*sn);
-				if (E) {
-					return &E->get();
+			while(o) {
+				GDScript *s=o;
+				while(s) {
+
+					Map<StringName,Variant>::Element *E=s->constants.find(*sn);
+					if (E) {
+						return &E->get();
+					}
+					s=s->_base;
 				}
-				s=s->_base;
+				o=o->_owner;
 			}
 
 
@@ -380,6 +390,8 @@ Variant GDFunction::call(GDInstance *p_instance,const Variant **p_args, int p_ar
 						}
 
 					}
+
+
 				} else {
 
 					GDNativeClass *nc= obj_B->cast_to<GDNativeClass>();
@@ -1150,6 +1162,9 @@ GDFunction::GDFunction() {
 	_stack_size=0;
 	_call_size=0;
 	name="<anonymous>";
+#ifdef DEBUG_ENABLED
+	_func_cname=NULL;
+#endif
 
 }
 
@@ -1436,6 +1451,7 @@ Error GDScript::reload() {
 
 
 
+
 	valid=false;
 	GDParser parser;
 	Error err = parser.parse(source,basedir);
@@ -1577,7 +1593,28 @@ void GDScript::_bind_methods() {
 
 Error GDScript::load_byte_code(const String& p_path) {
 
-	Vector<uint8_t> bytecode = FileAccess::get_file_as_array(p_path);
+	Vector<uint8_t> bytecode;
+
+	if (p_path.ends_with("gde")) {
+
+		FileAccess *fa = FileAccess::open(p_path,FileAccess::READ);
+		ERR_FAIL_COND_V(!fa,ERR_CANT_OPEN);
+		FileAccessEncrypted *fae = memnew( FileAccessEncrypted );
+		ERR_FAIL_COND_V(!fae,ERR_CANT_OPEN);
+		Vector<uint8_t> key;
+		key.resize(32);
+		for(int i=0;i<key.size();i++) {
+			key[i]=script_encryption_key[i];
+		}
+		Error err = fae->open_and_parse(fa,key,FileAccessEncrypted::MODE_READ);
+		ERR_FAIL_COND_V(err,err);
+		bytecode.resize(fae->get_len());
+		fae->get_buffer(bytecode.ptr(),bytecode.size());
+		memdelete(fae);
+	} else {
+
+		bytecode = FileAccess::get_file_as_array(p_path);
+	}
 	ERR_FAIL_COND_V(bytecode.size()==0,ERR_PARSE_ERROR);
 	path=p_path;
 
@@ -1678,12 +1715,14 @@ Ref<GDScript> GDScript::get_base() const {
 GDScript::GDScript() {
 
 
+	_static_ref=this;
 	valid=false;
 	subclass_count=0;
 	initializer=NULL;
 	_base=NULL;
 	_owner=NULL;
 	tool=false;
+
 }
 
 
@@ -2143,6 +2182,7 @@ void GDScriptLanguage::get_reserved_words(List<String> *p_words) const  {
 		"and",
 		"or",
 		"export",
+		"assert",
 	0};
 
 
@@ -2209,7 +2249,7 @@ RES ResourceFormatLoaderGDScript::load(const String &p_path,const String& p_orig
 
 	Ref<GDScript> scriptres(script);
 
-	if (p_path.ends_with(".gdc")) {
+	if (p_path.ends_with(".gde") || p_path.ends_with(".gdc")) {
 
 		script->set_script_path(p_original_path); // script needs this.
 		script->set_path(p_original_path);
@@ -2242,6 +2282,7 @@ void ResourceFormatLoaderGDScript::get_recognized_extensions(List<String> *p_ext
 
 	p_extensions->push_back("gd");
 	p_extensions->push_back("gdc");
+	p_extensions->push_back("gde");
 }
 
 bool ResourceFormatLoaderGDScript::handles_type(const String& p_type) const {
@@ -2252,7 +2293,7 @@ bool ResourceFormatLoaderGDScript::handles_type(const String& p_type) const {
 String ResourceFormatLoaderGDScript::get_resource_type(const String &p_path) const {
 
 	String el = p_path.extension().to_lower();
-	if (el=="gd" || el=="gdc")
+	if (el=="gd" || el=="gdc" || el=="gde")
 		return "GDScript";
 	return "";
 }

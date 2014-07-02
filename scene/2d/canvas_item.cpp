@@ -255,7 +255,7 @@ void CanvasItem::_enter_canvas() {
 	if ((!get_parent() || !get_parent()->cast_to<CanvasItem>()) || toplevel) {
 
 		Node *n = this;
-		viewport=NULL;
+		Viewport *viewport=NULL;
 		canvas_layer=NULL;
 
 		while(n) {
@@ -288,15 +288,10 @@ void CanvasItem::_enter_canvas() {
 	} else {
 
 		CanvasItem *parent = get_parent_item();
-		viewport=parent->viewport;
 		VisualServer::get_singleton()->canvas_item_set_parent(canvas_item,parent->get_canvas_item());
 		parent->_queue_sort_children();
 	}
 
-	if (!viewport) {
-
-		print_line("no viewport wtf!");
-	}
 	pending_update=false;
 	update();
 
@@ -308,7 +303,6 @@ void CanvasItem::_exit_canvas() {
 
 	notification(NOTIFICATION_EXIT_CANVAS,true); //reverse the notification
 	VisualServer::get_singleton()->canvas_item_set_parent(canvas_item,RID());
-	viewport=NULL;
 	canvas_layer=NULL;
 	group="";
 
@@ -453,7 +447,7 @@ float CanvasItem::get_self_opacity() const {
 
 void CanvasItem::set_blend_mode(BlendMode p_blend_mode) {
 
-	ERR_FAIL_INDEX(p_blend_mode,4);
+	ERR_FAIL_INDEX(p_blend_mode,5);
 	blend_mode=p_blend_mode;
 	VisualServer::get_singleton()->canvas_item_set_blend_mode(canvas_item,VS::MaterialBlendMode(blend_mode));
 
@@ -655,7 +649,7 @@ void CanvasItem::_notify_transform(CanvasItem *p_node) {
 Rect2 CanvasItem::get_viewport_rect() const {
 
 	ERR_FAIL_COND_V(!is_inside_scene(),Rect2());
-	return viewport->get_visible_rect();
+	return get_viewport()->get_visible_rect();
 }
 
 RID CanvasItem::get_canvas() const {
@@ -665,7 +659,7 @@ RID CanvasItem::get_canvas() const {
 	if (canvas_layer)
 		return canvas_layer->get_world_2d()->get_canvas();
 	else
-		return viewport->find_world_2d()->get_canvas();
+		return get_viewport()->find_world_2d()->get_canvas();
 
 
 }
@@ -680,11 +674,6 @@ CanvasItem *CanvasItem::get_toplevel() const {
 	return ci;
 }
 
-Viewport *CanvasItem::get_viewport() const {
-
-	return viewport;
-}
-
 
 Ref<World2D> CanvasItem::get_world_2d() const {
 
@@ -694,8 +683,8 @@ Ref<World2D> CanvasItem::get_world_2d() const {
 
 	if (tl->canvas_layer) {
 		return tl->canvas_layer->get_world_2d();
-	} else if (tl->viewport) {
-		return tl->viewport->find_world_2d();
+	} else if (tl->get_viewport()) {
+		return tl->get_viewport()->find_world_2d();
 	} else {
 		return Ref<World2D>();
 	}
@@ -705,7 +694,7 @@ Ref<World2D> CanvasItem::get_world_2d() const {
 RID CanvasItem::get_viewport_rid() const {
 
 	ERR_FAIL_COND_V(!is_inside_scene(),RID());
-	return viewport->get_viewport();
+	return get_viewport()->get_viewport();
 }
 
 void CanvasItem::set_block_transform_notify(bool p_enable) {
@@ -783,8 +772,8 @@ void CanvasItem::_bind_methods() {
 	ObjectTypeDB::bind_method(_MD("draw_texture_rect_region","texture:Texture","rect","src_rect","modulate"),&CanvasItem::draw_texture_rect_region,DEFVAL(Color(1,1,1)));
 	ObjectTypeDB::bind_method(_MD("draw_style_box","style_box:StyleBox","rect"),&CanvasItem::draw_style_box);
 	ObjectTypeDB::bind_method(_MD("draw_primitive","points","colors","uvs","texture:Texture","width"),&CanvasItem::draw_primitive,DEFVAL(Array()),DEFVAL(Ref<Texture>()),DEFVAL(1.0));
-	ObjectTypeDB::bind_method(_MD("draw_polygon","points","colors","uvs","texture:Texture"),&CanvasItem::draw_primitive,DEFVAL(Array()),DEFVAL(Ref<Texture>()));
-	ObjectTypeDB::bind_method(_MD("draw_colored_polygon","points","color","uvs","texture:Texture"),&CanvasItem::draw_primitive,DEFVAL(Array()),DEFVAL(Ref<Texture>()));
+	ObjectTypeDB::bind_method(_MD("draw_polygon","points","colors","uvs","texture:Texture"),&CanvasItem::draw_polygon,DEFVAL(Array()),DEFVAL(Ref<Texture>()));
+	ObjectTypeDB::bind_method(_MD("draw_colored_polygon","points","color","uvs","texture:Texture"),&CanvasItem::draw_colored_polygon,DEFVAL(Array()),DEFVAL(Ref<Texture>()));
 	ObjectTypeDB::bind_method(_MD("draw_string","font:Font","pos","text","modulate","clip_w"),&CanvasItem::draw_string,DEFVAL(Color(1,1,1)),DEFVAL(-1));
 	ObjectTypeDB::bind_method(_MD("draw_char","font:Font","pos","char","next","modulate"),&CanvasItem::draw_char,DEFVAL(Color(1,1,1)));
 
@@ -795,7 +784,7 @@ void CanvasItem::_bind_methods() {
 	ObjectTypeDB::bind_method(_MD("get_viewport_rect"),&CanvasItem::get_viewport_rect);
 	ObjectTypeDB::bind_method(_MD("get_canvas"),&CanvasItem::get_canvas);
 	ObjectTypeDB::bind_method(_MD("get_world_2d"),&CanvasItem::get_world_2d);
-	ObjectTypeDB::bind_method(_MD("get_viewport"),&CanvasItem::get_viewport);
+	//ObjectTypeDB::bind_method(_MD("get_viewport"),&CanvasItem::get_viewport);
 
 	BIND_VMETHOD(MethodInfo("_draw"));
 
@@ -805,7 +794,7 @@ void CanvasItem::_bind_methods() {
 	ADD_PROPERTY( PropertyInfo(Variant::BOOL,"visibility/behind_parent"), _SCS("set_draw_behind_parent"),_SCS("is_draw_behind_parent_enabled") );
 	ADD_PROPERTY( PropertyInfo(Variant::BOOL,"visibility/on_top",PROPERTY_HINT_NONE,"",0), _SCS("_set_on_top"),_SCS("_is_on_top") ); //compatibility
 
-	ADD_PROPERTYNZ( PropertyInfo(Variant::INT,"visibility/blend_mode",PROPERTY_HINT_ENUM, "Mix,Add,Sub,Mul"), _SCS("set_blend_mode"),_SCS("get_blend_mode") );
+	ADD_PROPERTYNZ( PropertyInfo(Variant::INT,"visibility/blend_mode",PROPERTY_HINT_ENUM, "Mix,Add,Sub,Mul,PMAlpha"), _SCS("set_blend_mode"),_SCS("get_blend_mode") );
 	//exporting these two things doesn't really make much sense i think
 	//ADD_PROPERTY( PropertyInfo(Variant::BOOL,"transform/toplevel"), _SCS("set_as_toplevel"),_SCS("is_set_as_toplevel") );
 	//ADD_PROPERTY(PropertyInfo(Variant::BOOL,"transform/notify"),_SCS("set_transform_notify"),_SCS("is_transform_notify_enabled"));
@@ -821,6 +810,7 @@ void CanvasItem::_bind_methods() {
 	BIND_CONSTANT( BLEND_MODE_ADD );
 	BIND_CONSTANT( BLEND_MODE_SUB );
 	BIND_CONSTANT( BLEND_MODE_MUL );
+	BIND_CONSTANT( BLEND_MODE_PREMULT_ALPHA );
 
 
 	BIND_CONSTANT( NOTIFICATION_DRAW);
@@ -832,20 +822,31 @@ void CanvasItem::_bind_methods() {
 
 }
 
+Matrix32 CanvasItem::get_canvas_transform() const {
+
+	ERR_FAIL_COND_V(!is_inside_scene(),Matrix32());
+
+	if (canvas_layer)
+		return canvas_layer->get_transform();
+	else
+		return get_viewport()->get_canvas_transform();
+
+}
+
 Matrix32 CanvasItem::get_viewport_transform() const {
 
 	ERR_FAIL_COND_V(!is_inside_scene(),Matrix32());
 
 	if (canvas_layer) {
 
-		if (viewport) {
-			return viewport->get_final_transform() * canvas_layer->get_transform();
+		if (get_viewport()) {
+			return get_viewport()->get_final_transform() * canvas_layer->get_transform();
 		} else {
 			return canvas_layer->get_transform();
 		}
 
-	} else if (viewport) {
-		return viewport->get_final_transform() * viewport->get_canvas_transform();
+	} else if (get_viewport()) {
+		return get_viewport()->get_final_transform() * get_viewport()->get_canvas_transform();
 	}
 
 	return Matrix32();
@@ -868,7 +869,7 @@ CanvasItem::CanvasItem() : xform_change(this) {
 	drawing=false;
 	behind=false;
 	block_transform_notify=false;
-	viewport=NULL;
+//	viewport=NULL;
 	canvas_layer=NULL;
 	global_invalid=true;
 
